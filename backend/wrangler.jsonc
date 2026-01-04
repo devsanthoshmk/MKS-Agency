@@ -1,0 +1,19 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "mks-ayurvedic-api",
+	"main": "src/index.js",
+	"compatibility_date": "2026-01-03",
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		"FRONTEND_URL": "http://localhost:5173",
+		"EMAIL_SERVER_URL": "http://localhost:3001"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "RATE_LIMIT",
+			"id": "YOUR_KV_NAMESPACE_ID"
+		}
+	]
+}

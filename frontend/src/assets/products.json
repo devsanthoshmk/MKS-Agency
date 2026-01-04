@@ -1,0 +1,293 @@
+{
+    "version": "1.0.1",
+    "updatedAt": "2026-01-04T23:30:00Z",
+    "categories": [
+        "supplements",
+        "oils",
+        "powders",
+        "capsules",
+        "skin-care",
+        "hair-care",
+        "immunity",
+        "digestive"
+    ],
+    "products": [
+        {
+            "id": "prod_001",
+            "slug": "ashwagandha-root-powder",
+            "name": "Ashwagandha Root Powder",
+            "description": "Premium organic Ashwagandha (Withania somnifera) root powder, traditionally used for stress relief, energy boost, and overall vitality. Our ashwagandha is sourced from certified organic farms and processed using cold-grinding to preserve its natural potency.",
+            "shortDescription": "Organic stress-relief adaptogen for energy & vitality",
+            "price": 299,
+            "comparePrice": 399,
+            "category": "supplements",
+            "subcategory": "powders",
+            "images": [
+                "https://images.unsplash.com/photo-1611241893603-3c359704e0ee?w=600&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&h=600&fit=crop"
+            ],
+            "stock": 150,
+            "isActive": true,
+            "tags": [
+                "organic",
+                "stress-relief",
+                "energy",
+                "adaptogen",
+                "bestseller"
+            ],
+            "benefits": [
+                "Reduces stress and anxiety",
+                "Boosts energy and stamina",
+                "Supports immune system",
+                "Enhances mental clarity"
+            ],
+            "ingredients": "100% Pure Organic Ashwagandha Root Powder",
+            "usage": "Mix 1/2 teaspoon with warm milk or water. Take twice daily.",
+            "weight": "100g",
+            "metaTitle": "Organic Ashwagandha Powder - Stress Relief & Energy",
+            "metaDescription": "Premium organic Ashwagandha root powder for stress relief, energy boost, and overall vitality. 100% natural and lab-tested."
+        },
+        {
+            "id": "prod_002",
+            "slug": "triphala-digestive-capsules",
+            "name": "Triphala Digestive Capsules",
+            "description": "Traditional Triphala formulation in easy-to-take capsules. Made from three powerful fruits - Amla, Haritaki, and Bibhitaki - this ancient Ayurvedic blend supports healthy digestion, detoxification, and regular bowel movements.",
+            "shortDescription": "Classic digestive blend for gut health & detox",
+            "price": 249,
+            "comparePrice": 349,
+            "category": "digestive",
+            "subcategory": "capsules",
+            "images": [
+                "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1550572017-edd951aa8f72?w=600&h=600&fit=crop"
+            ],
+            "stock": 200,
+            "isActive": true,
+            "tags": [
+                "digestive",
+                "detox",
+                "organic",
+                "gut-health"
+            ],
+            "benefits": [
+                "Promotes healthy digestion",
+                "Natural detoxification",
+                "Supports regular bowel movements",
+                "Rich in antioxidants"
+            ],
+            "ingredients": "Amla, Haritaki, Bibhitaki (Vegetarian Capsule Shell)",
+            "usage": "Take 2 capsules with water before bedtime or as directed.",
+            "weight": "60 Capsules",
+            "metaTitle": "Triphala Capsules - Natural Digestive Support",
+            "metaDescription": "Traditional Triphala capsules for healthy digestion, detox, and gut health. Made with Amla, Haritaki, and Bibhitaki."
+        },
+        {
+            "id": "prod_003",
+            "slug": "brahmi-memory-oil",
+            "name": "Brahmi Memory Oil",
+            "description": "Cold-pressed Brahmi oil infused with coconut oil for enhanced mental clarity and memory. This traditional Ayurvedic preparation helps calm the mind, improve concentration, and promote healthy sleep patterns when used for head massage.",
+            "shortDescription": "Traditional brain-boosting oil for memory & focus",
+            "price": 349,
+            "comparePrice": 449,
+            "category": "oils",
+            "subcategory": "hair-care",
+            "images": [
+                "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=600&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=600&h=600&fit=crop"
+            ],
+            "stock": 80,
+            "isActive": true,
+            "tags": [
+                "memory",
+                "focus",
+                "hair-oil",
+                "stress-relief",
+                "new"
+            ],
+            "benefits": [
+                "Enhances memory and concentration",
+                "Promotes healthy hair growth",
+                "Calms the mind",
+                "Supports better sleep"
+            ],
+            "ingredients": "Brahmi Extract, Cold-Pressed Coconut Oil, Bhringraj",
+            "usage": "Warm the oil and massage gently onto scalp. Leave for 30 minutes or overnight.",
+            "weight": "100ml",
+            "metaTitle": "Brahmi Oil for Memory & Hair - Ayurvedic Head Massage Oil",
+            "metaDescription": "Traditional Brahmi oil for enhanced memory, focus, and healthy hair. Perfect for relaxing head massage."
+        },
+        {
+            "id": "prod_004",
+            "slug": "tulsi-immunity-drops",
+            "name": "Tulsi Immunity Drops",
+            "description": "Concentrated Holy Basil (Tulsi) extract drops for daily immunity support. Our triple-extraction process ensures maximum potency of this sacred Ayurvedic herb, known for its powerful immunomodulatory and antioxidant properties.",
+            "shortDescription": "Concentrated Tulsi for daily immune support",
+            "price": 199,
+            "comparePrice": 299,
+            "category": "immunity",
+            "subcategory": "drops",
+            "images": [
+                "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=600&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=600&h=600&fit=crop"
+            ],
+            "stock": 250,
+            "isActive": true,
+            "tags": [
+                "immunity",
+                "tulsi",
+                "organic",
+                "daily-supplement",
+                "bestseller"
+            ],
+            "benefits": [
+                "Boosts natural immunity",
+                "Rich in antioxidants",
+                "Supports respiratory health",
+                "Reduces stress response"
+            ],
+            "ingredients": "Triple-Extracted Tulsi (Holy Basil) Concentrate",
+            "usage": "Add 10-15 drops to water or tea, twice daily.",
+            "weight": "30ml",
+            "metaTitle": "Tulsi Immunity Drops - Daily Immune Booster",
+            "metaDescription": "Concentrated Tulsi drops for daily immunity support. Triple-extracted Holy Basil for maximum potency."
+        },
+        {
+            "id": "prod_005",
+            "slug": "neem-turmeric-face-wash",
+            "name": "Neem & Turmeric Face Wash",
+            "description": "Gentle yet effective Ayurvedic face wash combining the antibacterial power of Neem with the brightening properties of Turmeric. Suitable for all skin types, it deeply cleanses while maintaining natural skin moisture.",
+            "shortDescription": "Antibacterial face wash for clear, glowing skin",
+            "price": 179,
+            "comparePrice": 249,
+            "category": "skin-care",
+            "subcategory": "face-wash",
+            "images": [
+                "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1570194065650-d99fb4b38b15?w=600&h=600&fit=crop"
+            ],
+            "stock": 120,
+            "isActive": true,
+            "tags": [
+                "skin-care",
+                "face-wash",
+                "neem",
+                "turmeric",
+                "acne"
+            ],
+            "benefits": [
+                "Deep cleansing action",
+                "Controls acne and pimples",
+                "Brightens skin naturally",
+                "Suitable for all skin types"
+            ],
+            "ingredients": "Neem Extract, Turmeric, Aloe Vera, Coconut-based Surfactants",
+            "usage": "Apply to wet face, massage gently, and rinse with water. Use twice daily.",
+            "weight": "100ml",
+            "metaTitle": "Neem Turmeric Face Wash - Ayurvedic Skin Care",
+            "metaDescription": "Natural Neem & Turmeric face wash for clear, glowing skin. Antibacterial and suitable for all skin types."
+        },
+        {
+            "id": "prod_006",
+            "slug": "chyawanprash-immunity-jam",
+            "name": "Chyawanprash Immunity Jam",
+            "description": "Traditional Chyawanprash made with 40+ Ayurvedic herbs and Amla as the key ingredient. This time-tested immunity booster is prepared following ancient recipes to ensure maximum efficacy and authentic taste.",
+            "shortDescription": "40+ herb immunity jam with Amla base",
+            "price": 399,
+            "comparePrice": 549,
+            "category": "immunity",
+            "subcategory": "supplements",
+            "images": [
+                "https://images.unsplash.com/photo-1612187209234-a3a7c69ee18e?w=600&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?w=600&h=600&fit=crop"
+            ],
+            "stock": 90,
+            "isActive": true,
+            "tags": [
+                "immunity",
+                "chyawanprash",
+                "family",
+                "winter-care",
+                "bestseller"
+            ],
+            "benefits": [
+                "Comprehensive immunity support",
+                "Rich in Vitamin C from Amla",
+                "Supports respiratory health",
+                "Suitable for all ages"
+            ],
+            "ingredients": "Amla, Ashwagandha, Ghee, Honey, 40+ Ayurvedic Herbs",
+            "usage": "Take 1-2 teaspoons with warm milk, morning and evening.",
+            "weight": "500g",
+            "metaTitle": "Chyawanprash - Traditional Ayurvedic Immunity Jam",
+            "metaDescription": "Authentic Chyawanprash with 40+ herbs for complete immunity support. Perfect for the whole family."
+        },
+        {
+            "id": "prod_007",
+            "slug": "bhringraj-hair-oil",
+            "name": "Bhringraj Hair Oil",
+            "description": "Premium Bhringraj (Eclipta alba) hair oil for thick, healthy, and lustrous hair. Infused with sesame oil and other Ayurvedic herbs, this oil strengthens hair from root to tip and prevents premature greying.",
+            "shortDescription": "Ayurvedic oil for thick, healthy hair",
+            "price": 279,
+            "comparePrice": 379,
+            "category": "hair-care",
+            "subcategory": "oils",
+            "images": [
+                "https://images.unsplash.com/photo-1526947425960-945c6e72858f?w=600&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=600&h=600&fit=crop"
+            ],
+            "stock": 110,
+            "isActive": true,
+            "tags": [
+                "hair-oil",
+                "bhringraj",
+                "hair-growth",
+                "anti-greying"
+            ],
+            "benefits": [
+                "Promotes hair growth",
+                "Prevents premature greying",
+                "Strengthens hair follicles",
+                "Reduces hair fall"
+            ],
+            "ingredients": "Bhringraj, Sesame Oil, Amla, Brahmi",
+            "usage": "Warm and apply to scalp and hair. Massage for 10 minutes. Leave overnight for best results.",
+            "weight": "200ml",
+            "metaTitle": "Bhringraj Hair Oil - Ayurvedic Hair Growth Oil",
+            "metaDescription": "Premium Bhringraj oil for thick, healthy hair and prevention of premature greying."
+        },
+        {
+            "id": "prod_008",
+            "slug": "shatavari-womens-wellness",
+            "name": "Shatavari Women's Wellness",
+            "description": "Pure Shatavari (Asparagus racemosus) capsules specifically formulated for women's health. This revered Ayurvedic herb supports hormonal balance, reproductive health, and overall vitality for women of all ages.",
+            "shortDescription": "Herbal support for women's hormonal balance",
+            "price": 329,
+            "comparePrice": 429,
+            "category": "supplements",
+            "subcategory": "capsules",
+            "images": [
+                "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=600&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=600&h=600&fit=crop"
+            ],
+            "stock": 140,
+            "isActive": true,
+            "tags": [
+                "womens-health",
+                "hormonal-balance",
+                "organic",
+                "vitality"
+            ],
+            "benefits": [
+                "Supports hormonal balance",
+                "Promotes reproductive health",
+                "Enhances energy and vitality",
+                "Natural stress relief"
+            ],
+            "ingredients": "100% Pure Shatavari Root Extract (Vegetarian Capsule)",
+            "usage": "Take 1-2 capsules twice daily with water or milk.",
+            "weight": "60 Capsules",
+            "metaTitle": "Shatavari Capsules - Women's Wellness & Hormonal Balance",
+            "metaDescription": "Pure Shatavari for women's hormonal balance, reproductive health, and overall vitality."
+        }
+    ]
+}
