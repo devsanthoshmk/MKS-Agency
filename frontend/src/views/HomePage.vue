@@ -36,9 +36,6 @@ onMounted(async () => {
     showHero.value = false
     scrollToProducts()
   }
-  
-  // Setup scroll observer
-  setupScrollObserver()
 })
 
 // Watch route for hero visibility
@@ -50,29 +47,6 @@ watch(() => route.name, (name) => {
     showHero.value = true
   }
 })
-
-// Scroll observer for URL sync
-let scrollObserver = null
-
-function setupScrollObserver() {
-  if (heroRef.value) {
-    scrollObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting && route.name === 'home') {
-            // Scrolled past hero - change to /products
-            router.replace({ path: '/products', query: route.query })
-          } else if (entry.isIntersecting && route.name === 'products' && !Object.keys(route.query).length) {
-            // Scrolled back to hero - change to /
-            router.replace({ path: '/' })
-          }
-        })
-      },
-      { threshold: 0.1 }
-    )
-    scrollObserver.observe(heroRef.value)
-  }
-}
 
 onUnmounted(() => {
   if (scrollObserver) {
