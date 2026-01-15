@@ -84,7 +84,7 @@ function viewProduct(slug) {
         >
           <!-- Product Image -->
           <div 
-            class="w-24 h-24 rounded-lg overflow-hidden bg-surface-200 flex-shrink-0 cursor-pointer"
+            class="w-24 h-24 rounded-lg overflow-hidden bg-surface-200 shrink-0 cursor-pointer"
             @click="viewProduct(item.slug)"
           >
             <img 

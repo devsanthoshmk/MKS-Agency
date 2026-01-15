@@ -36,13 +36,13 @@ function getIcon(type) {
       <div 
         v-for="toast in notifications" 
         :key="toast.id"
-        class="pointer-events-auto px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-[280px] max-w-[400px]"
+        class="pointer-events-auto px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-70 max-w-100"
         :class="getToastClasses(toast.type)"
       >
-        <span class="flex-shrink-0">{{ getIcon(toast.type) }}</span>
+        <span class="shrink-0">{{ getIcon(toast.type) }}</span>
         <p class="flex-1 text-sm font-medium">{{ toast.message }}</p>
         <button 
-          class="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+          class="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
           @click="removeToast(toast.id)"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

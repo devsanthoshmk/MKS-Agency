@@ -83,7 +83,7 @@ function proceedToCheckout() {
           class="flex gap-4 p-3 bg-surface-50 rounded-xl"
         >
           <!-- Product Image -->
-          <div class="w-20 h-20 rounded-lg overflow-hidden bg-surface-200 flex-shrink-0">
+          <div class="w-20 h-20 rounded-lg overflow-hidden bg-surface-200 shrink-0">
             <img 
               v-if="item.product.images?.[0]"
               :src="item.product.images[0]"

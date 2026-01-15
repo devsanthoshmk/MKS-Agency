@@ -60,7 +60,7 @@ function getStatusColor(status) {
       <div class="relative min-h-screen flex items-center justify-center p-4">
         <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col">
           <!-- Header -->
-          <div class="p-6 border-b border-surface-200 flex items-center justify-between flex-shrink-0">
+          <div class="p-6 border-b border-surface-200 flex items-center justify-between shrink-0">
             <div>
               <h2 class="text-xl font-display font-bold text-surface-900">My Orders</h2>
               <p class="text-surface-500 text-sm mt-1">Track and manage your orders</p>
@@ -183,7 +183,7 @@ function getStatusColor(status) {
                       :key="item.id"
                       class="flex gap-3 bg-surface-50 rounded-xl p-3"
                     >
-                      <div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-200 flex-shrink-0">
+                      <div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-200 shrink-0">
                         <img 
                           v-if="item.productImage"
                           :src="item.productImage"

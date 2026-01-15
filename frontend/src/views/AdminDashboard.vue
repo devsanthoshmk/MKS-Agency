@@ -460,7 +460,7 @@ function generateSlug(name) {
                 :key="product.id"
                 class="flex items-center gap-4 p-3 bg-surface-50 rounded-lg"
               >
-                <div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-200 flex-shrink-0">
+                <div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-200 shrink-0">
                   <img
                     v-if="product.images?.[0]"
                     :src="product.images[0]"

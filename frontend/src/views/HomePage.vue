@@ -158,7 +158,7 @@ const sortOptions = [
               <!-- Decorative circles -->
               <div class="absolute inset-0 rounded-full border-2 border-primary-200/50 animate-pulse" />
               <div class="absolute inset-8 rounded-full border-2 border-accent-200/50" style="animation: pulse 3s infinite 0.5s" />
-              <div class="absolute inset-16 rounded-full bg-gradient-to-br from-primary-100 to-accent-100" />
+              <div class="absolute inset-16 rounded-full bg-linear-to-br from-primary-100 to-accent-100" />
               
               <!-- Center content -->
               <div class="absolute inset-24 rounded-full bg-white shadow-2xl flex items-center justify-center">
@@ -271,10 +271,10 @@ const sortOptions = [
           </div>
           
           <!-- Sort Dropdown -->
-          <div class="flex-shrink-0">
+          <div class="shrink-0">
             <select 
               :value="filters.sort"
-              class="input py-2 px-3 text-sm min-w-[140px]"
+              class="input py-2 px-3 text-sm min-w-35"
               @change="handleSortChange($event.target.value)"
             >
               <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
