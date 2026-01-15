@@ -33,16 +33,16 @@ onUnmounted(() => {
 })
 
 // Watch route for product modal
-watch(() => route.params.slug, (slug) => {
-  if (slug && route.name === 'product-detail') {
-    const product = getProductBySlug(slug)
-    if (product) {
-      openModal('product', product)
-    }
-  } else if (activeModal.value === 'product') {
-    closeModal()
-  }
-}, { immediate: true })
+// watch(() => route.params.slug, (slug) => {
+//   if (slug && route.name === 'product-detail') {
+//     const product = getProductBySlug(slug)
+//     if (product) {
+//       openModal('product', product)
+//     }
+//   } else if (activeModal.value === 'product') {
+//     closeModal()
+//   }
+// }, { immediate: true })
 
 // Watch route for checkout modal
 watch(() => route.name, (name) => {
