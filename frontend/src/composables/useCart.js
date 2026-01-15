@@ -4,12 +4,12 @@
  */
 
 import { ref, computed, watch } from 'vue'
+import { useUI } from '@/composables/useUI'
 
 const CART_STORAGE_KEY = 'mks_cart'
 
 // Cart items: [{ product, quantity }]
 const items = ref([])
-const isOpen = ref(false)
 
 // Initialize from localStorage
 function initCart() {
@@ -85,8 +85,9 @@ function addItem(product, quantity = 1) {
         })
     }
 
-    // Open cart panel
-    isOpen.value = true
+    // Open cart panel (without hash navigation for quick add actions)
+    const { openModal } = useUI()
+    openModal('cart')
 }
 
 // Remove item from cart
@@ -144,17 +145,37 @@ function getCartItem(productId) {
     return items.value.find(item => item.product.id === productId)
 }
 
-// Toggle cart panel
+// Toggle cart panel (use router hash)
 function toggleCart() {
-    isOpen.value = !isOpen.value
+    const { activeModal } = useUI()
+    const router = window.__vueRouter
+    if (activeModal.value === 'cart') {
+        router?.push({ hash: '' })
+    } else {
+        router?.push({ hash: '#cart' })
+    }
 }
 
 function openCart() {
-    isOpen.value = true
+    const router = window.__vueRouter
+    router?.push({ hash: '#cart' })
 }
 
 function closeCart() {
-    isOpen.value = false
+    const router = window.__vueRouter
+    // Only navigate if hash exists, otherwise just close the modal
+    if (router?.currentRoute?.value?.hash === '#cart') {
+        router.push({ hash: '' })
+    } else {
+        const { closeModalWithoutNavigation } = useUI()
+        closeModalWithoutNavigation()
+    }
+}
+
+// Computed isOpen based on activeModal
+function getIsOpen() {
+    const { activeModal } = useUI()
+    return computed(() => activeModal.value === 'cart')
 }
 
 // Get items for checkout/order
@@ -173,7 +194,8 @@ function getCheckoutItems() {
 
 export function useCart() {
     // Total items count
-    
+    const isOpen = getIsOpen()
+
     return {
         // State
         items,

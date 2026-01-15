@@ -7,7 +7,7 @@ import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
 const { itemCount: cartCount, toggleCart } = useCart()
-const { itemCount: wishlistCount, toggleWishlist } = useWishlist()
+const { itemCount: wishlistCount } = useWishlist()
 const { isAuthenticated, user, logout, openAuthModal } = useAuth()
 
 const isMobileMenuOpen = ref(false)
@@ -83,9 +83,8 @@ function goToOrders() {
           </button>
           
           <!-- Wishlist -->
-          <button 
+          <router-link :to="{ hash: '#wishlist' }"
             class="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-100 transition-colors"
-            @click="toggleWishlist"
           >
             <svg class="w-5 h-5 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -96,7 +95,7 @@ function goToOrders() {
             >
               {{ wishlistCount > 99 ? '99+' : wishlistCount }}
             </span>
-          </button>
+          </router-link>
           
           <!-- Cart -->
           <button 

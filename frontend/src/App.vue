@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import NavbarComp from './components/NavbarComp.vue'
 import CartPanel from './components/CartPanel.vue'
 import WishlistPanel from './components/WishlistPanel.vue'
@@ -16,11 +16,12 @@ import { useAuth } from './composables/useAuth'
 import { useUI } from './composables/useUI'
 
 const route = useRoute()
-const { isOpen: isCartOpen } = useCart()
-const { isOpen: isWishlistOpen } = useWishlist()
+const router = useRouter()
+const { isOpen: isCartOpen, closeCart } = useCart()
+const { isOpen: isWishlistOpen, closeWishlist } = useWishlist()
 const { loadProducts, getProductBySlug } = useProducts()
 const { isAuthModalOpen } = useAuth()
-const { activeModal, openModal, closeModal, setupEscapeListener, removeEscapeListener } = useUI()
+const { activeModal, openModal, closeModalWithoutNavigation, setupEscapeListener, removeEscapeListener } = useUI()
 
 // Load products on mount
 onMounted(async () => {
@@ -32,19 +33,19 @@ onUnmounted(() => {
   removeEscapeListener()
 })
 
-// Watch route for product modal
-// watch(() => route.params.slug, (slug) => {
-//   if (slug && route.name === 'product-detail') {
-//     const product = getProductBySlug(slug)
-//     if (product) {
-//       openModal('product', product)
-//     }
-//   } else if (activeModal.value === 'product') {
-//     closeModal()
-//   }
-// }, { immediate: true })
+// Watch route hash for cart/wishlist modals
+watch(() => route.hash, (hash, oldHash) => {
+  if (hash === '#wishlist') {
+    openModal('wishlist')
+  } else if (hash === '#cart') {
+    openModal('cart')
+  } else if (oldHash === '#wishlist' || oldHash === '#cart') {
+    // Hash was removed, close the modal
+    closeModalWithoutNavigation()
+  }
+}, { immediate: true })
 
-// Watch route for checkout modal
+// Watch route for checkout/orders modals
 watch(() => route.name, (name) => {
   if (name === 'checkout') {
     openModal('checkout')
@@ -52,6 +53,21 @@ watch(() => route.name, (name) => {
     openModal('orders')
   }
 }, { immediate: true })
+
+// Handle overlay click - close and remove hash from URL
+function handleOverlayClick() {
+  if (activeModal.value === 'cart' || activeModal.value === 'wishlist') {
+    // Only navigate if there's a hash to remove
+    if (route.hash === '#cart' || route.hash === '#wishlist') {
+      router.push({ path: route.path, hash: '' })
+    } else {
+      // Cart was opened without hash (e.g., from addItem), just close it
+      closeModalWithoutNavigation()
+    }
+  } else {
+    closeModalWithoutNavigation()
+  }
+}
 </script>
 
 <template>
@@ -86,7 +102,7 @@ watch(() => route.name, (name) => {
       <div 
         v-if="isCartOpen || isWishlistOpen || activeModal"
         class="overlay"
-        @click="closeModal"
+        @click="handleOverlayClick"
       />
     </transition>
   </div>

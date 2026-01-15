@@ -7,13 +7,19 @@ import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 // UI State
-const activeModal = ref(null) // 'product', 'checkout', 'orders', 'auth'
+const activeModal = ref(null) // 'product', 'checkout', 'orders', 'auth', 'cart', 'wishlist'
 const modalData = ref(null)
 const notifications = ref([])
 const isLoading = ref(false)
+const previousRoute = ref('/products') // Track where user came from
 
 // Toast notifications
 let toastId = 0
+
+// // test
+// watch(activeModal, (newVal) => {
+//     console.info(activeModal, "changed")
+// })
 
 export function useUI() {
     const route = useRoute()
@@ -21,22 +27,33 @@ export function useUI() {
 
     // Modal management
     function openModal(type, data = null) {
+        // Store current route before opening modal (for navigation back)
+        // route may be undefined when called from route guards outside Vue components
+        if (route?.path && !['cart', 'wishlist', 'product-detail', 'checkout', 'orders'].includes(route.name)) {
+            previousRoute.value = route.fullPath
+        }
         activeModal.value = type
         modalData.value = data
         document.body.style.overflow = 'hidden'
     }
 
     function closeModal() {
+        const wasModal = activeModal.value
         activeModal.value = null
         modalData.value = null
         document.body.style.overflow = ''
 
-        // Navigate back if on modal route
-        if (route.name === 'product-detail') {
-            router.push('/products')
-        } else if (route.name === 'checkout' || route.name === 'orders') {
-            router.back()
+        // Navigate back to previous route for route-based modals
+        if (wasModal === 'wishlist' || wasModal === 'cart' || wasModal === 'product') {
+            router.push(previousRoute.value || '/products')
         }
+    }
+
+    // Close modal without navigation (for programmatic closes)
+    function closeModalWithoutNavigation() {
+        activeModal.value = null
+        modalData.value = null
+        document.body.style.overflow = ''
     }
 
     function closeAllOverlays() {
@@ -123,6 +140,7 @@ export function useUI() {
         // Modal methods
         openModal,
         closeModal,
+        closeModalWithoutNavigation,
         closeAllOverlays,
 
         // Toast methods

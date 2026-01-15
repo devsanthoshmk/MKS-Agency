@@ -4,12 +4,21 @@
  */
 
 import { ref, computed, watch } from 'vue'
+import { useUI } from '@/composables/useUI'
 
+const { activeModal } = useUI()
 const WISHLIST_STORAGE_KEY = 'mks_wishlist'
 
 // Wishlist items (product objects)
 const items = ref([])
-const isOpen = ref(false)
+// // test
+// watch(activeModal, (newVal) => {
+//     console.info(activeModal, "changed")
+// })
+const isOpen = computed(() => {
+    console.info("Wishlist isOpen:", activeModal?.value === 'wishlist', activeModal?.value);
+    return activeModal?.value === 'wishlist';
+})
 
 // Initialize from localStorage
 function initWishlist() {
@@ -87,17 +96,32 @@ export function useWishlist() {
         items.value = []
     }
 
-    // Toggle wishlist panel
+    // Toggle wishlist panel (use router hash)
     function toggleWishlist() {
-        isOpen.value = !isOpen.value
+        const { activeModal } = useUI()
+        // Import router in the function to avoid issues at module level
+        const router = window.__vueRouter
+        if (activeModal.value === 'wishlist') {
+            router?.push({ hash: '' })
+        } else {
+            router?.push({ hash: '#wishlist' })
+        }
     }
 
     function openWishlist() {
-        isOpen.value = true
+        const router = window.__vueRouter
+        router?.push({ hash: '#wishlist' })
     }
 
     function closeWishlist() {
-        isOpen.value = false
+        const router = window.__vueRouter
+        // Only navigate if hash exists, otherwise just close the modal
+        if (router?.currentRoute?.value?.hash === '#wishlist') {
+            router.push({ hash: '' })
+        } else {
+            const { closeModalWithoutNavigation } = useUI()
+            closeModalWithoutNavigation()
+        }
     }
 
     return {

@@ -37,27 +37,16 @@ const router = createRouter({
             name: 'product-detail',
             component: HomePage,
             beforeEnter: (to, from, next) => {
-                const slug=to.params.slug
+                const slug = to.params.slug
                 const product = getProductBySlug(slug)
                 if (product) {
-                openModal('product', product)
+                    openModal('product', product)
                 }
                 next()
             },
             meta: { title: 'Product Details - MKS Ayurvedic' }
         },
-        {
-            path: '/cart',
-            name: 'cart',
-            component: HomePage,
-            meta: { title: 'Cart - MKS Ayurvedic' }
-        },
-        {
-            path: '/wishlist',
-            name: 'wishlist',
-            component: HomePage,
-            meta: { title: 'Wishlist - MKS Ayurvedic' }
-        },
+        // Cart and wishlist are now handled via hash fragments (e.g., /products#wishlist)
         {
             path: '/checkout',
             name: 'checkout',
@@ -91,12 +80,15 @@ const router = createRouter({
         if (savedPosition) {
             return savedPosition
         }
+        // Don't scroll for cart/wishlist hash navigation
+        if (to.hash === '#cart' || to.hash === '#wishlist') {
+            return false
+        }
         if (to.hash) {
             return { el: to.hash, behavior: 'smooth' }
         }
         // Don't scroll to top when switching between modal routes
-        if (to.name === 'product-detail' || to.name === 'cart' ||
-            to.name === 'wishlist' || to.name === 'checkout' || to.name === 'orders') {
+        if (to.name === 'product-detail' || to.name === 'checkout' || to.name === 'orders') {
             return false
         }
         return { top: 0 }
@@ -108,6 +100,9 @@ router.beforeEach((to, from, next) => {
     document.title = to.meta.title || 'MKS Ayurvedic'
     next()
 })
+
+// Expose router globally for composables
+window.__vueRouter = router
 
 // Create and mount app
 const app = createApp(App)
