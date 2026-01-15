@@ -16,30 +16,6 @@ const HomePage = () => import('./views/HomePage.vue')
 const AdminDashboard = () => import('./views/AdminDashboard.vue')
 const GuestVerification = () => import('./views/GuestVerification.vue')
 
-// scrollToProducts function imported
-let isFirstLoad = true
-// intersection observer for updating products route
-const scrollObserver = new IntersectionObserver(
-    (entries) => {
-    entries.forEach((entry) => {
-        if (!entry.isIntersecting && route.name === 'home') {
-        // Scrolled past hero - change to /products
-        router.replace({ path: '/products', query: route.query })
-        } else if (entry.isIntersecting && route.name === 'products' && !Object.keys(route.query).length) {
-        // Scrolled back to hero - change to /
-        router.replace({ path: '/' })
-        }
-    })
-    },
-    { threshold: 0.1 }
-)
-function scrollToProducts() {
-    if (isFirstLoad) {
-
-        isFirstLoad = false
-    }
-}
-
 // Router Configuration
 const router = createRouter({
     history: createWebHistory(),
