@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import TheHeader from './components/TheHeader.vue'
+import NavbarComp from './components/NavbarComp.vue'
 import CartPanel from './components/CartPanel.vue'
 import WishlistPanel from './components/WishlistPanel.vue'
 import ProductModal from './components/ProductModal.vue'
@@ -57,7 +57,7 @@ watch(() => route.name, (name) => {
 <template>
   <div class="min-h-screen bg-surface-50">
     <!-- Header -->
-    <TheHeader />
+    <NavbarComp />
     
     <!-- Main Content -->
     <main>
