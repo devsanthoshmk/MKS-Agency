@@ -1079,10 +1079,10 @@ router.put('/api/admin/products', async (request, env) => {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					message: `Update products - ${new Date().toISOString()}`,
+					message: `Update products - ${new Date().toISOString()} (from admin page)`,
 					content: btoa(unescape(encodeURIComponent(JSON.stringify(productData, null, 2)))),
 					sha,
-					branch: 'main'
+					branch: 'master'
 				})
 			}
 		)

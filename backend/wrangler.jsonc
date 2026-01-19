@@ -15,7 +15,7 @@
 		// Convex deployment URL (get from Convex dashboard)
 		"CONVEX_URL": "https://tame-ermine-520.convex.cloud",
 		// GitHub repo for products.json updates (format: owner/repo)
-		"GITHUB_REPO": "YOUR_GITHUB_USERNAME/MKS-Agency",
+		"GITHUB_REPO": "devsanthoshmk/MKS-Agency",
 		// Fallback admin passcode (prefer using ADMIN_SECRETS KV)
 		"ADMIN_PASSCODE": "mksagency-admin"
 	},
