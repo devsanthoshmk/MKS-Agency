@@ -1,4 +1,4 @@
-# MKS Agency E-commerce - Email Server Documentation
+# MKS Agencies E-commerce - Email Server Documentation
 
 ## Overview
 

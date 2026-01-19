@@ -16,7 +16,7 @@
         // GitHub repo for products.json updates (format: owner/repo)
         "GITHUB_REPO": "devsanthoshmk/MKS-Agency",
         // Fallback admin passcode (prefer using ADMIN_SECRETS KV)
-        "ADMIN_PASSCODE": "mksagency-admin"
+        "ADMIN_PASSCODE": "mksagencies-admin"
     },
     "kv_namespaces": [
         // Rate limiting storage

@@ -1,5 +1,5 @@
 -- =====================================================
--- Ayurvedic Ecommerce Database Schema
+-- MKS Agencies E-commerce Database Schema
 -- PostgreSQL with Row Level Security (RLS)
 -- =====================================================
 
@@ -396,10 +396,10 @@ CREATE TRIGGER order_status_change_history
 -- SEED DATA
 -- =====================================================
 
--- Create default admin (passcode: mksagency-admin)
+-- Create default admin (passcode: mksagencies-admin)
 -- bcrypt hash of 'mksagency-admin' with 10 rounds
 INSERT INTO admins (name, passcode_hash)
-VALUES ('MKS Agency Admin', '$2b$10$rKN8VZE5YK3.ORqVHRKqk.dB7xIKX9tZ8bJGhCz/6qGp1HvKMVYjy')
+VALUES ('MKS Agencies Admin', '$2b$10$rKN8VZE5YK3.ORqVHRKqk.dB7xIKX9tZ8bJGhCz/6qGp1HvKMVYjy')
 ON CONFLICT DO NOTHING;
 
 -- =====================================================

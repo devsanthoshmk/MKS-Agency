@@ -1,4 +1,4 @@
-# MKS Agency E-commerce - Backend Documentation
+# MKS Agencies E-commerce - Backend Documentation
 
 ## Overview
 
@@ -145,7 +145,7 @@ curl http://localhost:8787/api/health
 ```bash
 curl -X POST http://localhost:8787/api/admin/login \
   -H "Content-Type: application/json" \
-  -d '{"passcode": "mksagency-admin"}'
+  -d '{"passcode": "mksagencies-admin"}'
 ```
 
 ### Create Order (Guest)

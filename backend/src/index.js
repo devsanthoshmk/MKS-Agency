@@ -1,5 +1,5 @@
 /**
- * Cloudflare Workers Backend - MKS Agency E-commerce API
+ * Cloudflare Workers Backend - MKS Agencies E-commerce API
  * 
  * This backend handles:
  * - Authentication (Google OAuth, email, guest)
@@ -1308,7 +1308,7 @@ router.put('/api/admin/products', async (request, env) => {
 				headers: {
 					'Authorization': `token ${githubToken}`,
 					'Accept': 'application/vnd.github.v3+json',
-					'User-Agent': 'MKS-Agency-Admin'
+					'User-Agent': 'MKS-Agencies-Admin'
 				}
 			}
 		)
@@ -1327,7 +1327,7 @@ router.put('/api/admin/products', async (request, env) => {
 				headers: {
 					'Authorization': `token ${githubToken}`,
 					'Accept': 'application/vnd.github.v3+json',
-					'User-Agent': 'MKS-Agency-Admin',
+					'User-Agent': 'MKS-Agencies-Admin',
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({

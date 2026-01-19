@@ -1,4 +1,4 @@
-# MKS Agency E-commerce - Database Documentation (Convex)
+# MKS Agencies E-commerce - Database Documentation (Convex)
 
 ## Overview
 

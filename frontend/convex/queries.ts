@@ -1,5 +1,5 @@
 /**
- * MKS Agency E-commerce - Convex Queries
+ * MKS Agencies E-commerce - Convex Queries
  * 
  * Public and authenticated queries for data access.
  * Public queries can be accessed without authentication (product data, etc.)
@@ -86,7 +86,7 @@ export const getAllOrders = query({
 
         if (args.status) {
             ordersQuery = ctx.db.query("orders")
-                .withIndex("by_status", (q) => q.eq("status", args.status))
+                .withIndex("by_status", (q) => q.eq("status", args.status as string))
                 .order("desc");
         }
 

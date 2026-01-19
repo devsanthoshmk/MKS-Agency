@@ -73,7 +73,7 @@ function handleLogout() {
           </div>
           <div class="hidden sm:block">
             <span class="text-xl font-display font-bold text-primary-700">MKS</span>
-            <span class="text-xl font-display text-surface-600"> Ayurvedic</span>
+            <span class="text-xl font-display text-surface-600"> Agencies</span>
           </div>
         </router-link>
         

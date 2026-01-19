@@ -105,14 +105,14 @@ const sortOptions = [
           <!-- Text Content -->
           <div class="text-center lg:text-left">
             <span class="inline-block px-4 py-2 bg-primary-100 text-primary-700 rounded-full text-sm font-medium mb-6 animate-fade-in">
-              🌿 100% Natural Ayurvedic Products
+              🌿 Siddha & Ayurveda Medicines
             </span>
             <h1 class="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-surface-900 mb-6 animate-slide-up">
               Discover the Power of
-              <span class="text-gradient"> Ancient Ayurveda</span>
+              <span class="text-gradient"> Siddha & Ayurveda</span>
             </h1>
             <p class="text-lg sm:text-xl text-surface-600 mb-8 max-w-xl mx-auto lg:mx-0 animate-slide-up" style="animation-delay: 0.1s">
-              Premium quality herbal supplements, oils, and remedies crafted from authentic Ayurvedic traditions for your holistic wellness journey.
+              Premium quality herbal supplements, oils, and remedies crafted from authentic Siddha and Ayurveda traditions for your holistic wellness journey.
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-slide-up" style="animation-delay: 0.2s">
               <button 
@@ -125,7 +125,7 @@ const sortOptions = [
                 </svg>
               </button>
               <button class="btn btn-secondary btn-lg">
-                Learn About Ayurveda
+                Our Traditions
               </button>
             </div>
             
@@ -369,10 +369,10 @@ const sortOptions = [
               <div class="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
                 <span class="text-white text-xl font-bold">M</span>
               </div>
-              <span class="text-xl font-display font-bold">MKS Ayurvedic</span>
+              <span class="text-xl font-display font-bold">MKS Agencies</span>
             </div>
             <p class="text-surface-400 max-w-md">
-              Bringing the ancient wisdom of Ayurveda to modern wellness. 100% natural products for your holistic health journey.
+              Bringing the ancient wisdom of Siddha and Ayurveda to modern wellness. Authentic medicines for your holistic health journey.
             </p>
           </div>
           
@@ -391,7 +391,7 @@ const sortOptions = [
           <div>
             <h4 class="font-semibold mb-4">Contact Us</h4>
             <ul class="space-y-2 text-surface-400">
-              <li>📧 contact@mksayurvedic.com</li>
+              <li>📧 contact@mksagencies.com</li>
               <li>📞 +91 98765 43210</li>
               <li>📍 Chennai, Tamil Nadu, India</li>
             </ul>
@@ -399,7 +399,7 @@ const sortOptions = [
         </div>
         
         <div class="border-t border-surface-800 mt-8 pt-8 text-center text-surface-500 text-sm">
-          <p>© 2026 MKS Ayurvedic. All rights reserved.</p>
+          <p>© 2026 MKS Agencies. All rights reserved.</p>
         </div>
       </div>
     </footer>

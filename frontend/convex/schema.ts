@@ -1,5 +1,5 @@
 /**
- * MKS Agency E-commerce - Convex Schema
+ * MKS Agencies E-commerce - Convex Schema
  * 
  * This schema defines the database structure for the e-commerce platform.
  * Tables include users, orders, order items, cart, wishlist, and status history.

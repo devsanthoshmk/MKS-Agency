@@ -84,8 +84,8 @@ const templates = {
           </div>
           
           <div class="footer">
-            <p>MKS Ayurvedic | 100% Natural Wellness</p>
-            <p>Need help? Contact us at support@mksayurvedic.com</p>
+            <p>MKS Agencies | Siddha & Ayurveda Medicines</p>
+            <p>Need help? Contact us at support@mksagencies.com</p>
           </div>
         </div>
       </div>
@@ -137,7 +137,7 @@ const templates = {
           <p style="text-align: center; color: #78716c;">${data.statusDescription}</p>
           
           <div class="footer">
-            <p>MKS Ayurvedic | 100% Natural Wellness</p>
+            <p>MKS Agencies | Siddha & Ayurveda Medicines</p>
           </div>
         </div>
       </div>
@@ -206,7 +206,7 @@ const templates = {
           <p>Hi ${data.name}! Please click the button below to verify your email address and confirm your order.</p>
           <a href="${data.verificationLink}" class="button">Verify Email</a>
           <p style="font-size: 14px;">Or copy this link: ${data.verificationLink}</p>
-          <p class="footer">This link expires in 24 hours.<br>MKS Ayurvedic | 100% Natural Wellness</p>
+          <p class="footer">This link expires in 24 hours.<br>MKS Agencies | Siddha & Ayurveda Medicines</p>
         </div>
       </div>
     </body>
@@ -219,7 +219,7 @@ const templates = {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Sign In to MKS Ayurvedic</title>
+      <title>Sign In to MKS Agencies</title>
       <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f5f5f4; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -238,13 +238,13 @@ const templates = {
         <div class="card">
           <div class="logo"><span>M</span></div>
           <h1>Sign In to Your Account</h1>
-          <p>Click the button below to securely sign in to MKS Ayurvedic. No password needed!</p>
+          <p>Click the button below to securely sign in to MKS Agencies. No password needed!</p>
           <a href="${data.loginLink}" class="button">Sign In Now</a>
           <div class="security-note">
             <p>🔒 This is a secure, one-time login link. It will expire in 24 hours.</p>
           </div>
           <p style="font-size: 14px;">Or copy this link: ${data.loginLink}</p>
-          <p class="footer">If you didn't request this, you can safely ignore this email.<br>MKS Ayurvedic | 100% Natural Wellness</p>
+          <p class="footer">If you didn't request this, you can safely ignore this email.<br>MKS Agencies | Siddha & Ayurveda Medicines</p>
         </div>
       </div>
     </body>
@@ -287,7 +287,7 @@ export async function handler(event, context) {
       if (path === '/send/order-confirmation') {
         const { to, name, orderNumber, items, total } = body
         await transporter.sendMail({
-          from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+          from: `"MKS Agencies" <${process.env.GMAIL_USER}>`,
           to,
           subject: `Order Confirmed - ${orderNumber}`,
           html: templates.orderConfirmation({ name, orderNumber, items, total })
@@ -309,7 +309,7 @@ export async function handler(event, context) {
         const safeDescription = statusDescription || ''
 
         await transporter.sendMail({
-          from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+          from: `"MKS Agencies" <${process.env.GMAIL_USER}>`,
           to,
           subject: `Order Update - ${orderNumber}: ${safeLabel}`,
           html: templates.statusUpdate({ orderNumber, statusLabel: safeLabel, statusDescription: safeDescription, trackingUrl })
@@ -327,7 +327,7 @@ export async function handler(event, context) {
         const { type, orderNumber, customerName, total } = body
         const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER
         await transporter.sendMail({
-          from: `"MKS Ayurvedic System" <${process.env.GMAIL_USER}>`,
+          from: `"MKS Agencies System" <${process.env.GMAIL_USER}>`,
           to: adminEmail,
           subject: `🔔 ${type === 'new-order' ? 'New Order' : 'Order Update'} - ${orderNumber}`,
           html: templates.adminAlert({ type, orderNumber, customerName, total })
@@ -344,9 +344,9 @@ export async function handler(event, context) {
       if (path === '/send/guest-verification') {
         const { to, name, verificationLink } = body
         await transporter.sendMail({
-          from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+          from: `"MKS Agencies" <${process.env.GMAIL_USER}>`,
           to,
-          subject: 'Verify Your Email - MKS Ayurvedic',
+          subject: 'Verify Your Email - MKS Agencies',
           html: templates.guestVerification({ name, verificationLink })
         })
         console.log(`✉️ Verification email sent to ${to}`)
@@ -361,9 +361,9 @@ export async function handler(event, context) {
       if (path === '/send/email-login') {
         const { to, loginLink } = body
         await transporter.sendMail({
-          from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+          from: `"MKS Agencies" <${process.env.GMAIL_USER}>`,
           to,
-          subject: 'Sign In to MKS Ayurvedic',
+          subject: 'Sign In to MKS Agencies',
           html: templates.emailLogin({ loginLink })
         })
         console.log(`✉️ Login email sent to ${to}`)

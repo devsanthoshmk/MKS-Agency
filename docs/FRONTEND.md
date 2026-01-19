@@ -1,4 +1,4 @@
-# MKS Agency E-commerce - Frontend Documentation
+# MKS Agencies E-commerce - Frontend Documentation
 
 ## Overview
 

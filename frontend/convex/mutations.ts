@@ -1,5 +1,5 @@
 /**
- * MKS Agency E-commerce - Convex Mutations
+ * MKS Agencies E-commerce - Convex Mutations
  * 
  * Server-side mutations for creating and updating data.
  * These are called from the Cloudflare Worker backend.

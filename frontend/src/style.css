@@ -1,13 +1,13 @@
-/* Ayurvedic Ecommerce - Main Stylesheet */
+/* MKS Agencies - Siddha & Ayurveda Ecommerce */
 /* Tailwind CSS v4 */
 
 @import "tailwindcss";
 
 /* =====================================================
-   DESIGN TOKENS - Ayurvedic Theme
+   DESIGN TOKENS - Siddha & Ayurveda Theme
    ===================================================== */
 @theme {
-    /* Color Palette - Forest/Emerald Ayurvedic Theme */
+    /* Color Palette - Siddha & Ayurveda Theme */
     --color-primary-50: #ecfdf5;
     --color-primary-100: #d1fae5;
     --color-primary-200: #a7f3d0;

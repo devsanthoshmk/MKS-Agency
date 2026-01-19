@@ -1,4 +1,4 @@
-# MKS Agency E-commerce
+# MKS Agencies E-commerce
 
 A complete e-commerce platform with manual payment verification workflow.
 
@@ -79,7 +79,7 @@ pnpm run dev
 ## Project Structure
 
 ```
-MKS-Agency/
+MKS-Agencies/
 ├── backend/             # Cloudflare Worker
 │   ├── src/index.js     # API routes
 │   └── wrangler.jsonc   # Worker config

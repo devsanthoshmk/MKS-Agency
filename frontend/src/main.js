@@ -25,13 +25,13 @@ const router = createRouter({
             path: '/',
             name: 'home',
             component: HomePage,
-            meta: { title: 'MKS Ayurvedic - Natural Health Solutions' }
+            meta: { title: 'MKS Agencies - Siddha & Ayurveda Solutions' }
         },
         {
             path: '/products',
             name: 'products',
             component: HomePage,
-            meta: { title: 'Products - MKS Ayurvedic' }
+            meta: { title: 'Products - MKS Agencies' }
         },
         {
             path: '/product/:slug',
@@ -45,38 +45,38 @@ const router = createRouter({
                 }
                 next()
             },
-            meta: { title: 'Product Details - MKS Ayurvedic' }
+            meta: { title: 'Product Details - MKS Agencies' }
         },
         // Cart and wishlist are now handled via hash fragments (e.g., /products#wishlist)
         {
             path: '/checkout',
             name: 'checkout',
             component: HomePage,
-            meta: { title: 'Checkout - MKS Ayurvedic' }
+            meta: { title: 'Checkout - MKS Agencies' }
         },
         {
             path: '/orders',
             name: 'orders',
             component: HomePage,
-            meta: { title: 'My Orders - MKS Ayurvedic' }
+            meta: { title: 'My Orders - MKS Agencies' }
         },
         {
             path: '/verify/:token',
             name: 'guest-verify',
             component: GuestVerification,
-            meta: { title: 'Verify Your Order - MKS Ayurvedic' }
+            meta: { title: 'Verify Your Order - MKS Agencies' }
         },
         {
             path: '/login/:token',
             name: 'email-login',
             component: LoginVerification,
-            meta: { title: 'Sign In - MKS Ayurvedic' }
+            meta: { title: 'Sign In - MKS Agencies' }
         },
         {
             path: '/admin',
             name: 'admin',
             component: AdminDashboard,
-            meta: { title: 'Admin Dashboard - MKS Ayurvedic' }
+            meta: { title: 'Admin Dashboard - MKS Agencies' }
         },
         {
             path: '/:pathMatch(.*)*',
@@ -104,7 +104,7 @@ const router = createRouter({
 
 // Update page title on route change
 router.beforeEach((to, from, next) => {
-    document.title = to.meta.title || 'MKS Ayurvedic'
+    document.title = to.meta.title || 'MKS Agencies'
     next()
 })
 

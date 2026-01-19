@@ -224,7 +224,7 @@ function closeOrderModal() {
             </div>
             <div>
               <h1 class="text-lg font-bold text-surface-900">Admin Dashboard</h1>
-              <p class="text-sm text-surface-500">MKS Ayurvedic</p>
+              <p class="text-sm text-surface-500">MKS Agencies</p>
             </div>
           </div>
           <div class="flex items-center gap-3">

@@ -82,7 +82,7 @@ onMounted(async () => {
             Go to Homepage
           </a>
           <p class="text-sm text-surface-500">
-            Need help? Contact us at <a href="mailto:support@mksayurvedic.com" class="text-primary-600 hover:underline">support@mksayurvedic.com</a>
+            Need help? Contact us at <a href="mailto:support@mksagencies.com" class="text-primary-600 hover:underline">support@mksagencies.com</a>
           </p>
         </div>
       </div>
