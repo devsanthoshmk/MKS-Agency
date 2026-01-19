@@ -7,6 +7,7 @@ The backend is a **Cloudflare Worker** that handles:
 - 📦 Order management with Convex database
 - 👑 Admin operations (order status, products via GitHub)
 - ⏱️ Rate limiting via KV
+- 📧 Transactional emails via Netlify Functions
 
 ## Architecture
 
@@ -222,3 +223,7 @@ For production, update `wrangler.jsonc`:
   }
 }
 ```
+
+## Related Documentation
+
+- [Email Server Documentation](EMAIL_SERVER.md)
