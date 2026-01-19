@@ -1,6 +1,7 @@
+//prduction build uses wrangler.production.jsonc
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "mks-agency-api",
+	"name": "backend",
 	"main": "src/index.js",
 	"compatibility_date": "2026-01-03",
 	"observability": {
@@ -22,15 +23,15 @@
 		// Rate limiting storage
 		{
 			"binding": "RATE_LIMIT",
-			"id": "c96b655c0bbc4c23abfaed566688512e",
+			"id": "ff0a31b3f79f45eb806090f4543a6b6e",
 			"remote": true
 		},
 		// Admin secrets (passcode, github_pat)
 		{
 			"binding": "ADMIN_SECRETS",
-			"id": "eceb5a6192074b57b13edbf6c174ea45",
+			"id": "a898b30e14784279b7613c07689d9ff3",
 			"remote": true
-		}
+		},
 	]
 	// SECRETS (add via `wrangler secret put`):
 	// - JWT_SECRET: Random 32+ character string for signing JWTs

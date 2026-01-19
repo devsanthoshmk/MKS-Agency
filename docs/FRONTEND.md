@@ -272,7 +272,7 @@ The admin can update order status with the following options:
 5. Select **Web application**
 6. Add authorized origins:
    - `http://localhost:5173` (development)
-   - `https://your-domain.com` (production)
+   - `https://mksagencies.pages.dev` (production)
 7. Copy the **Client ID** to `.env.local`
 
 Add to `index.html`:
@@ -312,12 +312,31 @@ await createOrder({ ... })
 
 ## Building for Production
 
+### Development Build
 ```bash
-# Build
+# Uses .env.local
 pnpm run build
+```
+
+### Production Build
+```bash
+# Uses .env.production
+pnpm run build:prod
 
 # Preview build
 pnpm run preview
+```
+
+### Production Environment (`.env.production`)
+```env
+# Backend API URL (Cloudflare Workers)
+VITE_API_URL=https://backend.mks-agencies-official.workers.dev
+
+# Convex Database URL  
+VITE_CONVEX_URL=https://tame-ermine-520.convex.cloud
+
+# Convex Deployment (production)
+CONVEX_DEPLOYMENT=prod:tame-ermine-520
 ```
 
 Output in `dist/` directory.
@@ -330,9 +349,19 @@ Output in `dist/` directory.
 
 1. Connect GitHub repo to Cloudflare Pages
 2. Build settings:
-   - Build command: `pnpm run build`
+   - Build command: `pnpm run build:prod`
    - Output directory: `dist`
-3. Add environment variables in dashboard
+3. Add environment variables in dashboard:
+   - `VITE_API_URL=https://backend.mks-agencies-official.workers.dev`
+   - `VITE_CONVEX_URL=https://tame-ermine-520.convex.cloud`
+
+### Production URLs
+| Service | URL |
+|---------|-----|
+| Frontend | https://mksagencies.pages.dev |
+| Backend | https://backend.mks-agencies-official.workers.dev |
+| Email Server | https://mksagencies-email.netlify.app |
+| Database | https://tame-ermine-520.convex.cloud |
 
 ### Vercel
 

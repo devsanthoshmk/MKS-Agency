@@ -78,6 +78,17 @@ The server is automatically deployed via Netlify when changes are pushed to the 
 netlify deploy --prod
 ```
 
+### Production URL
+The email server is deployed at: `https://mksagencies-email.netlify.app`
+
+### Production URLs
+| Service | URL |
+|---------|-----|
+| Email Server | https://mksagencies-email.netlify.app |
+| Backend | https://backend.mks-agencies-official.workers.dev |
+| Frontend | https://mksagencies.pages.dev |
+| Database | https://tame-ermine-520.convex.cloud |
+
 ### `netlify.toml` Configuration
 
 The routing is handled by a redirect rule:

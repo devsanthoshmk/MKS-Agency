@@ -1,0 +1,37 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "backend",
+    "main": "src/index.js",
+    "compatibility_date": "2026-01-03",
+    "observability": {
+        "enabled": true
+    },
+    "vars": {
+        // Frontend URL for CORS and redirects (Cloudflare Pages)
+        "FRONTEND_URL": "https://mksagencies.pages.dev",
+        // Email server for notifications (Netlify Functions)
+        "EMAIL_SERVER_URL": "https://mksagencies-email.netlify.app",
+        // Convex deployment URL (production database)
+        "CONVEX_URL": "https://tame-ermine-520.convex.cloud",
+        // GitHub repo for products.json updates (format: owner/repo)
+        "GITHUB_REPO": "YOUR_GITHUB_USERNAME/MKS-Agency",
+        // Fallback admin passcode (prefer using ADMIN_SECRETS KV)
+        "ADMIN_PASSCODE": "mksagency-admin"
+    },
+    "kv_namespaces": [
+        // Rate limiting storage
+        {
+            "binding": "RATE_LIMIT",
+            "id": "ff0a31b3f79f45eb806090f4543a6b6e"
+        },
+        // Admin secrets (passcode, github_pat)
+        {
+            "binding": "ADMIN_SECRETS",
+            "id": "a898b30e14784279b7613c07689d9ff3"
+        }
+    ]
+    // SECRETS (add via `wrangler secret put`):
+    // - JWT_SECRET: Random 32+ character string for signing JWTs
+    // - CONVEX_ADMIN_KEY: Get from Convex dashboard > Settings > Deploy key
+    // - GITHUB_TOKEN: GitHub Personal Access Token with repo contents:write scope
+}

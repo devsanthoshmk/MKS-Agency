@@ -127,17 +127,44 @@ No payment gateway needed - all payments verified manually by admin.
 
 ## Deployment
 
+### Production URLs
+| Service | URL |
+|---------|-----|
+| **Frontend** | https://mksagencies.pages.dev |
+| **Backend** | https://backend.mks-agencies-official.workers.dev |
+| **Email Server** | https://mksagencies-email.netlify.app |
+| **Database** | https://tame-ermine-520.convex.cloud |
+
 ### Backend (Cloudflare Workers)
 ```bash
 cd backend
+# Development deployment (uses wrangler.jsonc)
 pnpm run deploy
+
+# Production deployment (uses wrangler.production.jsonc)
+pnpm run deploy:prod
 ```
 
 ### Frontend (Cloudflare Pages)
 ```bash
 cd frontend
-pnpm run build
+# Build for production (uses .env.production)
+pnpm run build:prod
 # Deploy dist/ to Cloudflare Pages
+```
+
+### Email Server (Netlify)
+```bash
+cd email-server
+# Deploy via Netlify CLI or dashboard
+netlify deploy --prod
+```
+
+### Convex Database
+```bash
+cd frontend
+# Deploy to production
+pnpm exec convex deploy --prod
 ```
 
 ---

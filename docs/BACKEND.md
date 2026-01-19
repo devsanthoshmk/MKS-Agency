@@ -207,22 +207,40 @@ PENDING_VERIFICATION  ──▶  PAYMENT_VERIFIED  ──▶  PROCESSING  ──
 
 ## Deployment
 
+### Development Deployment
 ```bash
-# Deploy to Cloudflare
+# Deploy with development settings (wrangler.jsonc)
 pnpm run deploy
 # or
 wrangler deploy
 ```
 
-For production, update `wrangler.jsonc`:
+### Production Deployment
+```bash
+# Deploy with production settings (wrangler.production.jsonc)
+pnpm run deploy:prod
+# or
+wrangler deploy -c wrangler.production.jsonc
+```
+
+### Production Configuration (`wrangler.production.jsonc`)
 ```jsonc
 {
   "vars": {
-    "FRONTEND_URL": "https://your-domain.com",
-    "CONVEX_URL": "https://your-prod-deployment.convex.cloud"
+    "FRONTEND_URL": "https://mksagencies.pages.dev",
+    "EMAIL_SERVER_URL": "https://mksagencies-email.netlify.app",
+    "CONVEX_URL": "https://tame-ermine-520.convex.cloud"
   }
 }
 ```
+
+### Production URLs
+| Service | URL |
+|---------|-----|
+| Backend | https://backend.mks-agencies-official.workers.dev |
+| Frontend | https://mksagencies.pages.dev |
+| Email Server | https://mksagencies-email.netlify.app |
+| Database | https://tame-ermine-520.convex.cloud |
 
 ## Related Documentation
 
