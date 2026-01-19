@@ -10,7 +10,7 @@
  * @see /docs/BACKEND.md for full documentation
  */
 
-// CORS headers for cross-origin requests
+// CORS headers for cross-origin requests triggering deploy
 const corsHeaders = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
