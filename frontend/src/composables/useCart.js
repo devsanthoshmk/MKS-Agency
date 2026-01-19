@@ -1,15 +1,17 @@
 /**
  * Cart Composable
- * Handles shopping cart state with localStorage persistence
+ * Handles shopping cart state with localStorage persistence and backend sync
  */
 
 import { ref, computed, watch } from 'vue'
 import { useUI } from '@/composables/useUI'
+import { useAuth } from '@/composables/useAuth'
 
 const CART_STORAGE_KEY = 'mks_cart'
 
 // Cart items: [{ product, quantity }]
 const items = ref([])
+const isSyncing = ref(false)
 
 // Initialize from localStorage
 function initCart() {
@@ -25,7 +27,7 @@ function initCart() {
 }
 
 // Save to localStorage
-function saveCart() {
+function saveToLocalStorage() {
     try {
         localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items.value))
     } catch (e) {
@@ -33,11 +35,13 @@ function saveCart() {
     }
 }
 
-// Watch for changes and save
-watch(items, saveCart, { deep: true })
+// Watch for changes and save locally
+watch(items, saveToLocalStorage, { deep: true })
 
-// Initialize on import
-initCart()
+// Initialize on import, but don't overwrite if already loaded
+if (items.value.length === 0) {
+    initCart()
+}
 
 const itemCount = computed(() => {
     return items.value.reduce((sum, item) => sum + item.quantity, 0)
@@ -60,17 +64,55 @@ const savings = computed(() => {
     }, 0)
 })
 
+// Sync local cart with server
+async function syncCart() {
+    const { isAuthenticated, apiRequest } = useAuth()
+
+    if (!isAuthenticated.value || isSyncing.value) return
+
+    isSyncing.value = true
+    try {
+        // 1. Push local items to server (merge)
+        if (items.value.length > 0) {
+            console.log('Syncing local items to server...')
+            await Promise.all(items.value.map(item =>
+                apiRequest('/api/cart/add', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        product: item.product,
+                        quantity: item.quantity
+                    })
+                })
+            ))
+        }
+
+        // 2. Fetch latest cart from server
+        console.log('Fetching server cart...')
+        const data = await apiRequest('/api/cart')
+
+        // 3. Update local state
+        if (data.cart) {
+            items.value = data.cart
+        }
+    } catch (e) {
+        console.error('Cart sync failed:', e)
+    } finally {
+        isSyncing.value = false
+    }
+}
+
 // Add item to cart
-function addItem(product, quantity = 1) {
+async function addItem(product, quantity = 1) {
+    const { isAuthenticated, apiRequest } = useAuth()
+
+    // Optimistic update
     const existingIndex = items.value.findIndex(
         item => item.product.id === product.id
     )
 
     if (existingIndex >= 0) {
-        // Update quantity
         items.value[existingIndex].quantity += quantity
     } else {
-        // Add new item
         items.value.push({
             product: {
                 id: product.id,
@@ -78,61 +120,117 @@ function addItem(product, quantity = 1) {
                 name: product.name,
                 price: product.price,
                 comparePrice: product.comparePrice,
-                images: product.images,
-                stock: product.stock
+                images: product.images, // Normalize to array if needed
+                image: product.image,   // Or single image string
+                stock: product.stock,
+                category: product.category
             },
             quantity
         })
     }
 
-    // Open cart panel (without hash navigation for quick add actions)
+    // Sync with backend if logged in
+    if (isAuthenticated.value) {
+        try {
+            await apiRequest('/api/cart/add', {
+                method: 'POST',
+                body: JSON.stringify({
+                    product: { ...product, images: undefined, image: product.images?.[0] || product.image },
+                    quantity
+                })
+            })
+        } catch (e) {
+            console.error('Failed to add item to server cart:', e)
+        }
+    }
+
+    // Open cart panel
     const { openModal } = useUI()
     openModal('cart')
 }
 
 // Remove item from cart
-function removeItem(productId) {
+async function removeItem(productId) {
+    const { isAuthenticated, apiRequest } = useAuth()
+
+    // Optimistic update
     const index = items.value.findIndex(item => item.product.id === productId)
     if (index >= 0) {
         items.value.splice(index, 1)
     }
+
+    // Sync with backend
+    if (isAuthenticated.value) {
+        try {
+            await apiRequest('/api/cart/remove', {
+                method: 'POST',
+                body: JSON.stringify({ productId })
+            })
+        } catch (e) {
+            console.error('Failed to remove item from server cart:', e)
+        }
+    }
 }
 
 // Update item quantity
-function updateQuantity(productId, quantity) {
+async function updateQuantity(productId, quantity) {
+    const { isAuthenticated, apiRequest } = useAuth()
+
     const item = items.value.find(item => item.product.id === productId)
     if (item) {
         if (quantity <= 0) {
-            removeItem(productId)
+            await removeItem(productId)
         } else {
+            // Optimistic update
+            const oldQuantity = item.quantity
             item.quantity = Math.min(quantity, item.product.stock || 99)
+
+            // Sync with backend
+            if (isAuthenticated.value && item.quantity !== oldQuantity) {
+                try {
+                    await apiRequest('/api/cart/update', {
+                        method: 'POST',
+                        body: JSON.stringify({ productId, quantity: item.quantity })
+                    })
+                } catch (e) {
+                    console.error('Failed to update server cart quantity:', e)
+                }
+            }
         }
     }
 }
 
 // Increment quantity
-function incrementQuantity(productId) {
+async function incrementQuantity(productId) {
     const item = items.value.find(item => item.product.id === productId)
     if (item && item.quantity < (item.product.stock || 99)) {
-        item.quantity++
+        await updateQuantity(productId, item.quantity + 1)
     }
 }
 
 // Decrement quantity
-function decrementQuantity(productId) {
+async function decrementQuantity(productId) {
     const item = items.value.find(item => item.product.id === productId)
     if (item) {
-        if (item.quantity > 1) {
-            item.quantity--
-        } else {
-            removeItem(productId)
-        }
+        await updateQuantity(productId, item.quantity - 1)
     }
 }
 
 // Clear cart
-function clearCart() {
+async function clearCart() {
+    const { isAuthenticated, apiRequest } = useAuth()
+
+    // Optimistic update
     items.value = []
+
+    // Sync with backend
+    if (isAuthenticated.value) {
+        try {
+            await apiRequest('/api/cart/clear', { method: 'POST' })
+        } catch (e) {
+            console.error('Failed to clear server cart:', e)
+        }
+    }
 }
 
 // Check if product is in cart
@@ -145,7 +243,7 @@ function getCartItem(productId) {
     return items.value.find(item => item.product.id === productId)
 }
 
-// Toggle cart panel (use router hash)
+// Toggle cart panel
 function toggleCart() {
     const { activeModal } = useUI()
     const router = window.__vueRouter
@@ -163,7 +261,6 @@ function openCart() {
 
 function closeCart() {
     const router = window.__vueRouter
-    // Only navigate if hash exists, otherwise just close the modal
     if (router?.currentRoute?.value?.hash === '#cart') {
         router.push({ hash: '' })
     } else {
@@ -185,21 +282,28 @@ function getCheckoutItems() {
         productSlug: item.product.slug,
         productName: item.product.name,
         productPrice: item.product.price,
-        productImage: item.product.images?.[0] || null,
+        productImage: item.product.images?.[0] || item.product.image || null,
         quantity: item.quantity,
         subtotal: item.product.price * item.quantity
     }))
 }
 
-
 export function useCart() {
-    // Total items count
+    const { isAuthenticated } = useAuth()
     const isOpen = getIsOpen()
+
+    // Watch for login to trigger sync
+    watch(isAuthenticated, (newVal) => {
+        if (newVal) {
+            syncCart()
+        }
+    }, { immediate: true })
 
     return {
         // State
         items,
         isOpen,
+        isSyncing,
 
         // Computed
         itemCount,
@@ -218,6 +322,7 @@ export function useCart() {
         toggleCart,
         openCart,
         closeCart,
-        getCheckoutItems
+        getCheckoutItems,
+        syncCart
     }
 }
