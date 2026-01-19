@@ -341,6 +341,19 @@ CONVEX_DEPLOYMENT=prod:tame-ermine-520
 
 Output in `dist/` directory.
 
+### Important: API URL Configuration
+
+All API calls in the frontend use the `VITE_API_URL` environment variable to construct full backend URLs. This is critical because:
+
+- **Development**: Vite's proxy forwards `/api/*` requests to `localhost:8787`
+- **Production**: No proxy exists; frontend and backend are on separate domains
+
+Components that make API calls (e.g., `AdminDashboard.vue`, `GuestVerification.vue`, etc.) must use:
+```javascript
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+fetch(`${API_URL}/api/endpoint`, { ... })
+```
+
 ---
 
 ## Deployment
@@ -363,8 +376,6 @@ Output in `dist/` directory.
 | Email Server | https://mksagencies-email.netlify.app |
 | Database | https://tame-ermine-520.convex.cloud |
 
-### Vercel
+# Future changes:
 
-```bash
-vercel --prod
-```
+- use product table in convex instead of products.json

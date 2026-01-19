@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, defineProps, defineEmits } from 'vue'
 
+// API URL for production/development
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+
 const props = defineProps({
   products: { type: Array, required: true },
   adminToken: { type: String, required: true }
@@ -63,7 +66,7 @@ async function saveProduct() {
 
   try {
     const updatedProducts = isCreatingProduct.value ? [...props.products, editingProduct.value] : props.products.map(p => p.id === editingProduct.value.id ? editingProduct.value : p)
-    const response = await fetch('/api/admin/products', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${props.adminToken}` }, body: JSON.stringify({ products: updatedProducts }) })
+    const response = await fetch(`${API_URL}/api/admin/products`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${props.adminToken}` }, body: JSON.stringify({ products: updatedProducts }) })
     if (response.ok) {
       saveSuccess.value = 'Product saved!'
       emit('refresh')
@@ -83,7 +86,7 @@ async function deleteProduct(productId) {
   if (!confirm('Delete this product?')) return
   isSaving.value = true
   try {
-    const response = await fetch('/api/admin/products', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${props.adminToken}` }, body: JSON.stringify({ products: props.products.filter(p => p.id !== productId) }) })
+    const response = await fetch(`${API_URL}/api/admin/products`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${props.adminToken}` }, body: JSON.stringify({ products: props.products.filter(p => p.id !== productId) }) })
     if (response.ok) emit('refresh')
   } catch (e) { console.error(e) }
   finally { isSaving.value = false }

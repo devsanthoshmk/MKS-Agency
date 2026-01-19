@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, watch, defineProps, defineEmits } from 'vue'
 
+// API URL for production/development
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+
 const props = defineProps({
   order: {
     type: Object,
@@ -141,7 +144,7 @@ async function updateOrderStatus() {
     // Get the order ID - it could be _id (Convex) or id
     const orderId = props.order._id || props.order.id
     
-    const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+    const response = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

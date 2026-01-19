@@ -2,6 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
+// API URL for production/development
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+
 const route = useRoute()
 const token = computed(() => route.params.token)
 const isLoading = ref(true)
@@ -16,7 +19,7 @@ onMounted(async () => {
   }
 
   try {
-    const response = await fetch('/api/auth/verify-guest', {
+    const response = await fetch(`${API_URL}/api/auth/verify-guest`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

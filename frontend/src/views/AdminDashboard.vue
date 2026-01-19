@@ -9,6 +9,9 @@ import OrderEditModal from '@/components/admin/OrderEditModal.vue'
 import ProductsManager from '@/components/admin/ProductsManager.vue'
 import ContentManager from '@/components/admin/ContentManager.vue'
 
+// API URL for production/development
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+
 const router = useRouter()
 
 // Auth state
@@ -63,7 +66,7 @@ async function handleLogin() {
   authError.value = ''
 
   try {
-    const response = await fetch('/api/admin/login', {
+    const response = await fetch(`${API_URL}/api/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ passcode: passcode.value })
@@ -116,7 +119,7 @@ async function loadData() {
 async function loadOrders() {
   isLoadingOrders.value = true
   try {
-    const response = await fetch('/api/admin/orders', {
+    const response = await fetch(`${API_URL}/api/admin/orders`, {
       headers: { 'Authorization': `Bearer ${adminToken.value}` }
     })
     const data = await response.json()
@@ -139,7 +142,7 @@ async function loadProducts() {
 
 async function loadAnalytics() {
   try {
-    const response = await fetch('/api/admin/analytics', {
+    const response = await fetch(`${API_URL}/api/admin/analytics`, {
       headers: { 'Authorization': `Bearer ${adminToken.value}` }
     })
     const data = await response.json()
