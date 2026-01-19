@@ -2,7 +2,7 @@
 [build]
   command = "echo 'no build'"
   functions = "functions"
-  publish = "email-server"
+  publish = "."
 
 [[redirects]]
   from = "/*"
