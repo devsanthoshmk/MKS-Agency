@@ -128,6 +128,7 @@ export default defineSchema({
             comparePrice: v.optional(v.number()),
             image: v.optional(v.string()),
             category: v.optional(v.string()),
+            stock: v.optional(v.number()),
         }),
         createdAt: v.number(),
     })
@@ -149,6 +150,7 @@ export default defineSchema({
             comparePrice: v.optional(v.number()),
             image: v.optional(v.string()),
             category: v.optional(v.string()),
+            stock: v.optional(v.number()),
         }),
         quantity: v.number(),
         createdAt: v.number(),

@@ -360,6 +360,7 @@ router.get('/api/wishlist', async (request, env, ctx, params, convex) => {
 			comparePrice: item.productData.comparePrice,
 			images: item.productData.image ? [item.productData.image] : undefined,
 			category: item.productData.category,
+			stock: item.productData.stock,
 			addedAt: new Date(item.createdAt).toISOString()
 		}))
 
@@ -392,7 +393,8 @@ router.post('/api/wishlist/add', async (request, env, ctx, params, convex) => {
 			price: product.price,
 			comparePrice: product.comparePrice,
 			image: product.images?.[0] || product.image,
-			category: product.category
+			category: product.category,
+			stock: product.stock
 		}
 
 		await convex.mutation('mutations:addToWishlist', {
@@ -456,7 +458,8 @@ router.get('/api/cart', async (request, env, ctx, params, convex) => {
 		const formattedCart = cart.map(item => ({
 			product: {
 				...item.productData,
-				images: item.productData.image ? [item.productData.image] : undefined
+				images: item.productData.image ? [item.productData.image] : undefined,
+				stock: item.productData.stock
 			},
 			quantity: item.quantity
 		}))
@@ -490,7 +493,8 @@ router.post('/api/cart/add', async (request, env, ctx, params, convex) => {
 			price: product.price,
 			comparePrice: product.comparePrice,
 			image: product.images?.[0] || product.image,
-			category: product.category
+			category: product.category,
+			stock: product.stock
 		}
 
 		await convex.mutation('mutations:addToCart', {
@@ -1380,6 +1384,7 @@ router.post('/api/cart/sync', async (request, env, ctx, params, convex) => {
 					comparePrice: item.comparePrice,
 					image: item.images?.[0] || item.image,
 					category: item.category,
+					stock: item.stock,
 				},
 				quantity: item.quantity || 1,
 			})

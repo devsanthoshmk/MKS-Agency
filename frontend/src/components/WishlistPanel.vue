@@ -123,22 +123,22 @@ function viewProduct(slug) {
             <!-- Stock Status -->
             <p 
               class="text-xs mt-1"
-              :class="item.stock > 0 ? 'text-green-600' : 'text-red-500'"
+              :class="(item.stock === undefined || item.stock > 0) ? 'text-green-600' : 'text-red-500'"
             >
-              {{ item.stock > 0 ? 'In Stock' : 'Out of Stock' }}
+              {{ (item.stock === undefined || item.stock > 0) ? 'In Stock' : 'Out of Stock' }}
             </p>
             
             <!-- Actions -->
             <div class="flex items-center gap-2 mt-3">
               <button 
-                v-if="item.stock > 0"
+                v-if="item.stock === undefined || item.stock > 0"
                 class="btn btn-primary btn-sm flex-1"
                 @click="moveToCart(item)"
               >
                 Add to Cart
               </button>
               <button 
-                v-if="item.stock > 0"
+                v-if="item.stock === undefined || item.stock > 0"
                 class="btn btn-secondary btn-sm"
                 @click="buyNow(item)"
               >
