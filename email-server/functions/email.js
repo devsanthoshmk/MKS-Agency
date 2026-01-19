@@ -7,23 +7,23 @@ import { createTransport } from 'nodemailer'
 
 // CORS headers
 const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
 }
 
 // Create nodemailer transporter
 const transporter = createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD
-    }
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD
+  }
 })
 
 // HTML Email Templates
 const templates = {
-    orderConfirmation: (data) => `
+  orderConfirmation: (data) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -93,7 +93,7 @@ const templates = {
     </html>
   `,
 
-    statusUpdate: (data) => `
+  statusUpdate: (data) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -145,7 +145,7 @@ const templates = {
     </html>
   `,
 
-    adminAlert: (data) => `
+  adminAlert: (data) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -180,7 +180,7 @@ const templates = {
     </html>
   `,
 
-    guestVerification: (data) => `
+  guestVerification: (data) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -213,7 +213,7 @@ const templates = {
     </html>
   `,
 
-    emailLogin: (data) => `
+  emailLogin: (data) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -253,145 +253,150 @@ const templates = {
 }
 
 export async function handler(event, context) {
-    // Handle OPTIONS request for CORS
-    if (event.httpMethod === 'OPTIONS') {
-        return {
-            statusCode: 200,
-            headers,
-            body: ''
-        }
+  // Handle OPTIONS request for CORS
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    }
+  }
+
+  // Parse path to route requests
+  // The path comes in as something like "/send/order-confirmation" or "/.netlify/functions/email/send/order-confirmation"
+  // We need to robustly handle this.
+  const path = event.path.replace(/^\/\.netlify\/functions\/email/, '') || '/'
+
+  console.log(`Received ${event.httpMethod} request for ${path}`)
+
+  try {
+    // Health check
+    if (path === '/health' && event.httpMethod === 'GET') {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() })
+      }
     }
 
-    // Parse path to route requests
-    // The path comes in as something like "/send/order-confirmation" or "/.netlify/functions/email/send/order-confirmation"
-    // We need to robustly handle this.
-    const path = event.path.replace(/^\/\.netlify\/functions\/email/, '') || '/'
+    // POST requests
+    if (event.httpMethod === 'POST') {
+      const body = JSON.parse(event.body || '{}')
 
-    console.log(`Received ${event.httpMethod} request for ${path}`)
-
-    try {
-        // Health check
-        if (path === '/health' && event.httpMethod === 'GET') {
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() })
-            }
-        }
-
-        // POST requests
-        if (event.httpMethod === 'POST') {
-            const body = JSON.parse(event.body || '{}')
-
-            // Send order confirmation
-            if (path === '/send/order-confirmation') {
-                const { to, name, orderNumber, items, total } = body
-                await transporter.sendMail({
-                    from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
-                    to,
-                    subject: `Order Confirmed - ${orderNumber}`,
-                    html: templates.orderConfirmation({ name, orderNumber, items, total })
-                })
-                console.log(`✉️ Order confirmation sent to ${to}`)
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify({ success: true })
-                }
-            }
-
-            // Send status update
-            if (path === '/send/status-update') {
-                const { to, orderNumber, status, statusLabel, statusDescription, trackingUrl } = body
-                await transporter.sendMail({
-                    from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
-                    to,
-                    subject: `Order Update - ${orderNumber}: ${statusLabel}`,
-                    html: templates.statusUpdate({ orderNumber, statusLabel, statusDescription, trackingUrl })
-                })
-                console.log(`✉️ Status update sent to ${to}`)
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify({ success: true })
-                }
-            }
-
-            // Send admin alert
-            if (path === '/send/admin-alert') {
-                const { type, orderNumber, customerName, total } = body
-                const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER
-                await transporter.sendMail({
-                    from: `"MKS Ayurvedic System" <${process.env.GMAIL_USER}>`,
-                    to: adminEmail,
-                    subject: `🔔 ${type === 'new-order' ? 'New Order' : 'Order Update'} - ${orderNumber}`,
-                    html: templates.adminAlert({ type, orderNumber, customerName, total })
-                })
-                console.log(`✉️ Admin alert sent for ${orderNumber}`)
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify({ success: true })
-                }
-            }
-
-            // Send guest verification
-            if (path === '/send/guest-verification') {
-                const { to, name, verificationLink } = body
-                await transporter.sendMail({
-                    from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
-                    to,
-                    subject: 'Verify Your Email - MKS Ayurvedic',
-                    html: templates.guestVerification({ name, verificationLink })
-                })
-                console.log(`✉️ Verification email sent to ${to}`)
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify({ success: true })
-                }
-            }
-
-            // Send email login link
-            if (path === '/send/email-login') {
-                const { to, loginLink } = body
-                await transporter.sendMail({
-                    from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
-                    to,
-                    subject: 'Sign In to MKS Ayurvedic',
-                    html: templates.emailLogin({ loginLink })
-                })
-                console.log(`✉️ Login email sent to ${to}`)
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify({ success: true })
-                }
-            }
-        }
-
-        // Accept root GET for simple check if needed, or 404
-        if (path === '/' && event.httpMethod === 'GET') {
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify({ message: 'Email server ready' })
-            }
-        }
-
-        // 404 for unmatched routes
+      // Send order confirmation
+      if (path === '/send/order-confirmation') {
+        const { to, name, orderNumber, items, total } = body
+        await transporter.sendMail({
+          from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+          to,
+          subject: `Order Confirmed - ${orderNumber}`,
+          html: templates.orderConfirmation({ name, orderNumber, items, total })
+        })
+        console.log(`✉️ Order confirmation sent to ${to}`)
         return {
-            statusCode: 404,
-            headers,
-            body: JSON.stringify({ error: `Not found: ${path}` })
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true })
         }
+      }
 
-    } catch (error) {
-        console.error('SERVER ERROR:', error)
+      // Send status update
+      if (path === '/send/status-update') {
+        const { to, orderNumber, status, statusLabel, statusDescription, trackingUrl } = body
+
+        // Fallback for missing labels
+        const safeLabel = statusLabel || status
+        const safeDescription = statusDescription || ''
+
+        await transporter.sendMail({
+          from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+          to,
+          subject: `Order Update - ${orderNumber}: ${safeLabel}`,
+          html: templates.statusUpdate({ orderNumber, statusLabel: safeLabel, statusDescription: safeDescription, trackingUrl })
+        })
+        console.log(`✉️ Status update sent to ${to}`)
         return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ error: 'Failed to process request', details: error.message })
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true })
         }
+      }
+
+      // Send admin alert
+      if (path === '/send/admin-alert') {
+        const { type, orderNumber, customerName, total } = body
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER
+        await transporter.sendMail({
+          from: `"MKS Ayurvedic System" <${process.env.GMAIL_USER}>`,
+          to: adminEmail,
+          subject: `🔔 ${type === 'new-order' ? 'New Order' : 'Order Update'} - ${orderNumber}`,
+          html: templates.adminAlert({ type, orderNumber, customerName, total })
+        })
+        console.log(`✉️ Admin alert sent for ${orderNumber}`)
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true })
+        }
+      }
+
+      // Send guest verification
+      if (path === '/send/guest-verification') {
+        const { to, name, verificationLink } = body
+        await transporter.sendMail({
+          from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+          to,
+          subject: 'Verify Your Email - MKS Ayurvedic',
+          html: templates.guestVerification({ name, verificationLink })
+        })
+        console.log(`✉️ Verification email sent to ${to}`)
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true })
+        }
+      }
+
+      // Send email login link
+      if (path === '/send/email-login') {
+        const { to, loginLink } = body
+        await transporter.sendMail({
+          from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+          to,
+          subject: 'Sign In to MKS Ayurvedic',
+          html: templates.emailLogin({ loginLink })
+        })
+        console.log(`✉️ Login email sent to ${to}`)
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true })
+        }
+      }
     }
+
+    // Accept root GET for simple check if needed, or 404
+    if (path === '/' && event.httpMethod === 'GET') {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'Email server ready' })
+      }
+    }
+
+    // 404 for unmatched routes
+    return {
+      statusCode: 404,
+      headers,
+      body: JSON.stringify({ error: `Not found: ${path}` })
+    }
+
+  } catch (error) {
+    console.error('SERVER ERROR:', error)
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: 'Failed to process request', details: error.message })
+    }
+  }
 }

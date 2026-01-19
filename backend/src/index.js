@@ -925,13 +925,49 @@ router.put('/api/admin/orders/:id/status', async (request, env, ctx, params, con
 		// Get updated order to send email notification
 		const order = await convex.query('queries:getOrderById', { orderId })
 
+		// Define status details
+		const statusMap = {
+			'PENDING_VERIFICATION': {
+				label: 'Pending Verification',
+				description: 'Your order is currently being verified. We will update you shortly.'
+			},
+			'PAYMENT_VERIFIED': {
+				label: 'Payment Verified',
+				description: 'We have received your payment. Your order is now being prepared.'
+			},
+			'PROCESSING': {
+				label: 'Processing',
+				description: 'Your order is currently being processed and packed.'
+			},
+			'SHIPPED': {
+				label: 'Shipped',
+				description: 'Great news! Your order is on its way to you.'
+			},
+			'DELIVERED': {
+				label: 'Delivered',
+				description: 'Your order has been delivered. Thank you for shopping with us!'
+			},
+			'CANCELLED': {
+				label: 'Cancelled',
+				description: 'Your order has been cancelled. If this was a mistake, please contact us.'
+			},
+			'FAILED': {
+				label: 'Payment/Order Failed',
+				description: 'There was an issue with your order or payment. Please contact support.'
+			}
+		}
+
+		const statusInfo = statusMap[status] || { label: status, description: '' }
+
 		// Send status update email
-		if (order && ['PAYMENT_VERIFIED', 'SHIPPED', 'DELIVERED'].includes(status)) {
+		if (order && ['PAYMENT_VERIFIED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'FAILED'].includes(status)) {
 			await sendEmail(env, 'status-update', {
 				to: order.shippingEmail,
 				name: order.shippingName,
 				orderNumber: order.orderNumber,
 				status,
+				statusLabel: statusInfo.label,
+				statusDescription: statusInfo.description,
 				trackingUrl,
 				trackingNumber,
 				courierName,

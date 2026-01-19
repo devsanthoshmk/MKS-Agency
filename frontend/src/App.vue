@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, onUnmounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NavbarComp from './components/NavbarComp.vue'
 import CartPanel from './components/CartPanel.vue'
@@ -22,6 +22,9 @@ const { isOpen: isWishlistOpen, closeWishlist } = useWishlist()
 const { loadProducts, getProductBySlug } = useProducts()
 const { isAuthModalOpen } = useAuth()
 const { activeModal, openModal, closeModalWithoutNavigation, setupEscapeListener, removeEscapeListener } = useUI()
+
+// Check if on admin page
+const isAdminPage = computed(() => route.name === 'admin')
 
 // Load products on mount
 onMounted(async () => {
@@ -72,8 +75,8 @@ function handleOverlayClick() {
 
 <template>
   <div class="min-h-screen bg-surface-50">
-    <!-- Header -->
-    <NavbarComp />
+    <!-- Header (hidden on admin page) -->
+    <NavbarComp v-if="!isAdminPage" />
     
     <!-- Main Content -->
     <main>

@@ -20,6 +20,21 @@ frontend/
 │   ├── assets/
 │   │   └── products.json  # Product catalog
 │   ├── components/        # Reusable components
+│   │   ├── admin/         # Admin dashboard components
+│   │   │   ├── AnalyticsDashboard.vue  # Stats & metrics
+│   │   │   ├── ContentManager.vue      # CMS (coming soon)
+│   │   │   ├── OrderEditModal.vue      # Order editing modal
+│   │   │   ├── OrdersManager.vue       # Order list & search
+│   │   │   └── ProductsManager.vue     # Product CRUD
+│   │   ├── AuthModal.vue
+│   │   ├── CartPanel.vue
+│   │   ├── CheckoutModal.vue
+│   │   ├── NavbarComp.vue
+│   │   ├── OrdersModal.vue
+│   │   ├── ProductCard.vue
+│   │   ├── ProductModal.vue
+│   │   ├── ToastNotifications.vue
+│   │   └── WishlistPanel.vue
 │   ├── composables/       # State management
 │   │   ├── useAuth.js     # Authentication
 │   │   ├── useCart.js     # Shopping cart
@@ -29,7 +44,8 @@ frontend/
 │   ├── views/             # Page components
 │   │   ├── HomePage.vue   # Main shop page
 │   │   ├── AdminDashboard.vue # Admin panel
-│   │   └── GuestVerification.vue
+│   │   ├── GuestVerification.vue
+│   │   └── LoginVerification.vue
 │   ├── App.vue
 │   └── main.js
 └── index.html
@@ -208,6 +224,44 @@ console.log('Status:', order.status)
 | `/admin` | AdminDashboard | Admin panel |
 
 ---
+
+## Admin Dashboard
+
+The admin dashboard (`/admin`) provides a comprehensive interface for managing the store.
+
+### Features
+
+- **Analytics Dashboard** - Overview of orders, revenue, and status metrics
+- **Order Management** - Search, filter, and manage orders with full editing capabilities
+- **Product Management** - CRUD operations for products (commits to GitHub)
+- **Content Management** - CMS for website content (coming soon)
+
+### Admin Components
+
+| Component | Description |
+|-----------|-------------|
+| `AnalyticsDashboard.vue` | Displays order statistics, revenue, and status breakdown |
+| `OrdersManager.vue` | Order list with search, filter, and selection |
+| `OrderEditModal.vue` | Full order editing with status updates, tracking info, and notes |
+| `ProductsManager.vue` | Product list with create/edit/delete operations |
+| `ContentManager.vue` | Placeholder for future CMS features |
+
+### Order Status Updates
+
+The admin can update order status with the following options:
+- `PENDING_VERIFICATION` - Awaiting payment confirmation
+- `PAYMENT_VERIFIED` - Payment confirmed
+- `PROCESSING` - Order being prepared
+- `SHIPPED` - Order dispatched (can add tracking info)
+- `DELIVERED` - Order delivered
+- `CANCELLED` - Order cancelled (requires reason)
+- `FAILED` - Order failed (requires reason)
+
+### Access
+
+1. Navigate to `/admin`
+2. Enter the admin passcode
+3. Session is stored in localStorage (2-hour expiry)
 
 ## Google OAuth Setup
 

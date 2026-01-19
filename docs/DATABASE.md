@@ -215,7 +215,11 @@ updateOrderStatus({
   status,
   trackingUrl?,
   trackingNumber?,
-  note?
+  courierName?,
+  note?,
+  adminNotes?,
+  cancellationReason?,
+  failureReason?
 })
 ```
 
