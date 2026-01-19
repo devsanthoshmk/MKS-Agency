@@ -1,234 +1,370 @@
 /**
- * Auth Composable
- * Handles authentication with Google OAuth and guest checkout
+ * Authentication Composable
+ * 
+ * Handles user authentication with Google OAuth and guest checkout.
+ * Uses JWT tokens stored in localStorage, synced with Convex via backend.
+ * 
+ * Usage:
+ *   import { useAuth } from '@/composables/useAuth'
+ *   const { user, isAuthenticated, loginWithGoogle, logout } = useAuth()
+ * 
+ * @see /docs/FRONTEND.md for full documentation
  */
 
 import { ref, computed, watch } from 'vue'
 
-const AUTH_STORAGE_KEY = 'mks_auth'
-const API_BASE = '/api'
+// ==================== CONSTANTS ====================
 
-// Auth state
+const TOKEN_KEY = 'mks_auth_token'
+const USER_KEY = 'mks_auth_user'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
+// ==================== STATE ====================
+
 const user = ref(null)
 const token = ref(null)
 const isLoading = ref(false)
 const error = ref(null)
 const isAuthModalOpen = ref(false)
 
-// Initialize from localStorage
+// ==================== MODAL FUNCTIONS ====================
+
+function openAuthModal() {
+    isAuthModalOpen.value = true
+}
+
+function closeAuthModal() {
+    isAuthModalOpen.value = false
+}
+
+// ==================== COMPUTED ====================
+
+const isAuthenticated = computed(() => !!token.value && !!user.value)
+const isGuest = computed(() => user.value?.isGuest ?? false)
+const convexUserId = computed(() => user.value?.id || null)
+
+// ==================== INITIALIZATION ====================
+
+/**
+ * Initialize auth state from localStorage
+ */
 function initAuth() {
     try {
-        const stored = localStorage.getItem(AUTH_STORAGE_KEY)
-        if (stored) {
-            const data = JSON.parse(stored)
-            user.value = data.user
-            token.value = data.token
+        const storedToken = localStorage.getItem(TOKEN_KEY)
+        const storedUser = localStorage.getItem(USER_KEY)
+        console.info('Auth init checking localStorage...', { storedToken, storedUser })
+        if (storedToken && storedUser) {
+            console.info('Restoring auth from localStorage initing...')
+            token.value = storedToken
+            user.value = JSON.parse(storedUser)
 
             // Verify token is still valid
             verifyToken()
         }
     } catch (e) {
-        console.warn('Auth load failed:', e)
+        console.warn('Auth init failed:', e)
         clearAuth()
     }
 }
 
-// Save to localStorage
+/**
+ * Save auth state to localStorage
+ */
 function saveAuth() {
+    if (token.value && user.value) {
+        console.info('  Saving auth state to localStorage...(the above saying is true)', { token: token.value, user: user.value })
+        localStorage.setItem(TOKEN_KEY, token.value)
+        localStorage.setItem(USER_KEY, JSON.stringify(user.value))
+    } else {
+        console.info('  Clearing auth state from localStorage...(logging out)', { token: token.value, user: user.value })
+        localStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(USER_KEY)
+    }
+}
+
+/**
+ * Clear auth state
+ */
+function clearAuth() {
+    token.value = null
+    user.value = null
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
+}
+
+// Watch for auth changes
+watch([token, user], () => {
+    console.info('Auth state changed, saving to localStorage...', { token: token.value, user: user.value })
+    saveAuth()
+})
+
+// ==================== API HELPERS ====================
+
+/**
+ * Make authenticated API request
+ */
+async function apiRequest(endpoint, options = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+    }
+
+    if (token.value) {
+        headers['Authorization'] = `Bearer ${token.value}`
+    }
+
+    const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers,
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+        throw new Error(data.error || 'Request failed')
+    }
+
+    return data
+}
+
+// ==================== AUTH METHODS ====================
+
+/**
+ * Verify current token is valid
+ */
+async function verifyToken() {
+    if (!token.value) return false
+
     try {
-        if (user.value && token.value) {
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
-                user: user.value,
-                token: token.value
-            }))
-        } else {
-            localStorage.removeItem(AUTH_STORAGE_KEY)
+        const data = await apiRequest('/api/auth/verify')
+        return data.valid
+    } catch (e) {
+        console.warn('Token verification failed:', e)
+        clearAuth()
+        return false
+    }
+}
+
+/**
+ * Login with Google OAuth
+ * 
+ * Uses Google Identity Services library.
+ * Can be called with a credential from the Google callback, or without to open the auth modal.
+ * 
+ * @param {string} [credential] - Optional Google credential from callback
+ */
+async function loginWithGoogle(credential) {
+    // If no credential provided, open the auth modal to let user sign in
+    if (!credential) {
+        openAuthModal()
+        return null
+    }
+
+    if (!GOOGLE_CLIENT_ID) {
+        error.value = 'Google Client ID not configured'
+        return null
+    }
+
+    isLoading.value = true
+    error.value = null
+
+    try {
+        // Send credential to backend
+        const data = await apiRequest('/api/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ credential }),
+        })
+
+        token.value = data.token
+        user.value = data.user
+
+        // Close the auth modal on successful login
+        closeAuthModal()
+
+        return data.user
+    } catch (e) {
+        console.error('Google login failed:', e)
+        error.value = e.message
+        return null
+    } finally {
+        isLoading.value = false
+    }
+}
+
+/**
+ * Continue as guest with email verification
+ */
+async function continueAsGuest(guestInfo) {
+    const { name, email, phone } = guestInfo
+
+    if (!name || !email || !phone) {
+        error.value = 'Name, email, and phone are required'
+        return null
+    }
+
+    isLoading.value = true
+    error.value = null
+
+    try {
+        const data = await apiRequest('/api/auth/guest', {
+            method: 'POST',
+            body: JSON.stringify({ name, email, phone }),
+        })
+
+        token.value = data.token
+        user.value = data.user
+
+        return {
+            user: data.user,
+            verificationRequired: data.verificationRequired,
         }
     } catch (e) {
-        console.warn('Auth save failed:', e)
+        console.error('Guest auth failed:', e)
+        error.value = e.message
+        return null
+    } finally {
+        isLoading.value = false
     }
 }
 
-// Watch for changes
-watch([user, token], saveAuth)
+/**
+ * Verify guest email with token
+ */
+async function verifyGuestEmail(verificationToken) {
+    isLoading.value = true
+    error.value = null
 
-// Initialize
+    try {
+        const data = await apiRequest('/api/auth/verify-guest', {
+            method: 'POST',
+            body: JSON.stringify({ token: verificationToken }),
+        })
+
+        if (data.verified && user.value) {
+            user.value = { ...user.value, isVerified: true }
+        }
+
+        return data.verified
+    } catch (e) {
+        console.error('Guest verification failed:', e)
+        error.value = e.message
+        return false
+    } finally {
+        isLoading.value = false
+    }
+}
+
+/**
+ * Send email login link
+ * 
+ * Sends a magic link to the user's email for passwordless login.
+ * 
+ * @param {string} email - User's email address
+ * @returns {Promise<{success: boolean, message?: string, error?: string}>}
+ */
+async function sendLoginEmail(email) {
+    if (!email) {
+        error.value = 'Email is required'
+        return { success: false, error: 'Email is required' }
+    }
+
+    isLoading.value = true
+    error.value = null
+
+    try {
+        const data = await apiRequest('/api/auth/email/send', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+        })
+
+        return {
+            success: true,
+            message: data.message || 'Login link sent to your email',
+            isNewUser: data.isNewUser
+        }
+    } catch (e) {
+        console.error('Send login email failed:', e)
+        error.value = e.message
+        return { success: false, error: e.message }
+    } finally {
+        isLoading.value = false
+    }
+}
+
+/**
+ * Verify email login token from magic link
+ * 
+ * Called when user clicks the login link from their email.
+ * Authenticates and sets user state.
+ * 
+ * @param {string} loginToken - Token from the magic link URL
+ * @returns {Promise<object|null>} User object on success, null on failure
+ */
+async function verifyLoginToken(loginToken) {
+    if (!loginToken) {
+        error.value = 'Login token is required'
+        return null
+    }
+
+    isLoading.value = true
+    error.value = null
+
+    try {
+        const data = await apiRequest('/api/auth/email/verify', {
+            method: 'POST',
+            body: JSON.stringify({ token: loginToken }),
+        })
+
+        token.value = data.token
+        user.value = data.user
+
+        // Close the auth modal on successful login
+        closeAuthModal()
+
+        return data.user
+    } catch (e) {
+        console.error('Login token verification failed:', e)
+        error.value = e.message
+        return null
+    } finally {
+        isLoading.value = false
+    }
+}
+
+/**
+ * Logout user
+ */
+function logout() {
+    clearAuth()
+
+    // Also sign out from Google
+    if (window.google?.accounts?.id) {
+        window.google.accounts.id.disableAutoSelect()
+    }
+}
+
+/**
+ * Get current auth token for API requests
+ */
+function getToken() {
+    return token.value
+}
+
+/**
+ * Get auth headers for API requests
+ */
+function getAuthHeaders() {
+    if (!token.value) return {}
+    return { 'Authorization': `Bearer ${token.value}` }
+}
+
+// Initialize on import
 initAuth()
 
+// ==================== EXPORT ====================
+
 export function useAuth() {
-    const isAuthenticated = computed(() => !!user.value && !!token.value)
-    const isGuest = computed(() => user.value?.isGuest === true)
-
-    // Verify current token
-    async function verifyToken() {
-        if (!token.value) return false
-
-        try {
-            const response = await fetch(`${API_BASE}/auth/verify`, {
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                }
-            })
-
-            if (!response.ok) {
-                clearAuth()
-                return false
-            }
-
-            const data = await response.json()
-            user.value = data.user
-            return true
-        } catch (e) {
-            console.warn('Token verification failed:', e)
-            return false
-        }
-    }
-
-    // Google One-Tap Login
-    async function loginWithGoogle(credential) {
-        isLoading.value = true
-        error.value = null
-
-        try {
-            const response = await fetch(`${API_BASE}/auth/google`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ credential })
-            })
-
-            if (!response.ok) {
-                throw new Error('Authentication failed')
-            }
-
-            const data = await response.json()
-            user.value = data.user
-            token.value = data.token
-            isAuthModalOpen.value = false
-
-            return true
-        } catch (e) {
-            error.value = e.message || 'Authentication failed'
-            return false
-        } finally {
-            isLoading.value = false
-        }
-    }
-
-    // Guest checkout - creates temporary user
-    async function createGuestSession(guestData) {
-        isLoading.value = true
-        error.value = null
-
-        try {
-            const response = await fetch(`${API_BASE}/auth/guest`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(guestData)
-            })
-
-            if (!response.ok) {
-                const err = await response.json()
-                throw new Error(err.message || 'Failed to create guest session')
-            }
-
-            const data = await response.json()
-            user.value = {
-                ...data.user,
-                isGuest: true
-            }
-            token.value = data.token
-
-            return {
-                success: true,
-                verificationRequired: data.verificationRequired,
-                verificationMethod: data.verificationMethod // 'email' or 'phone'
-            }
-        } catch (e) {
-            error.value = e.message || 'Failed to create guest session'
-            return { success: false, error: error.value }
-        } finally {
-            isLoading.value = false
-        }
-    }
-
-    // Verify guest via email link
-    async function verifyGuestEmail(verificationToken) {
-        isLoading.value = true
-        error.value = null
-
-        try {
-            const response = await fetch(`${API_BASE}/auth/verify-guest`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ token: verificationToken })
-            })
-
-            if (!response.ok) {
-                throw new Error('Verification failed')
-            }
-
-            const data = await response.json()
-
-            if (data.verified) {
-                // Update user as verified
-                if (user.value) {
-                    user.value.isVerified = true
-                }
-                return { success: true }
-            }
-
-            return { success: false, error: 'Invalid verification token' }
-        } catch (e) {
-            error.value = e.message || 'Verification failed'
-            return { success: false, error: error.value }
-        } finally {
-            isLoading.value = false
-        }
-    }
-
-    // Logout
-    function logout() {
-        clearAuth()
-    }
-
-    function clearAuth() {
-        user.value = null
-        token.value = null
-        localStorage.removeItem(AUTH_STORAGE_KEY)
-    }
-
-    // Open/close auth modal
-    function openAuthModal() {
-        isAuthModalOpen.value = true
-    }
-
-    function closeAuthModal() {
-        isAuthModalOpen.value = false
-    }
-
-    // Get auth header for API requests
-    function getAuthHeader() {
-        if (!token.value) return {}
-        return {
-            'Authorization': `Bearer ${token.value}`
-        }
-    }
-
-    // Prompt login if not authenticated
-    function requireAuth() {
-        if (!isAuthenticated.value) {
-            openAuthModal()
-            return false
-        }
-        return true
-    }
-
     return {
         // State
         user,
@@ -240,16 +376,22 @@ export function useAuth() {
         // Computed
         isAuthenticated,
         isGuest,
+        convexUserId,
 
         // Methods
         loginWithGoogle,
-        createGuestSession,
+        continueAsGuest,
         verifyGuestEmail,
-        verifyToken,
+        sendLoginEmail,
+        verifyLoginToken,
         logout,
+        verifyToken,
+        getToken,
+        getAuthHeaders,
         openAuthModal,
         closeAuthModal,
-        getAuthHeader,
-        requireAuth
+
+        // API helper
+        apiRequest,
     }
 }

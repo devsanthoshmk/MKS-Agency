@@ -9,8 +9,8 @@ import { useOrders } from '../composables/useOrders'
 const router = useRouter()
 const { activeModal, closeModal, success, error: showError } = useUI()
 const { items, subtotal, clearCart } = useCart()
-const { isAuthenticated, user, createGuestSession } = useAuth()
-const { createOrder, isLoading } = useOrders()
+const { isAuthenticated, user, continueAsGuest } = useAuth()
+const { placeOrder, isLoading } = useOrders()
 
 const isOpen = computed(() => activeModal.value === 'checkout')
 
@@ -98,14 +98,14 @@ async function handleSubmit() {
     
     // If not authenticated, create guest session
     if (!isAuthenticated.value) {
-      const guestResult = await createGuestSession({
+      const guestResult = await continueAsGuest({
         name: form.value.name,
         email: form.value.email,
         phone: form.value.phone
       })
       
-      if (!guestResult.success) {
-        showError(guestResult.error || 'Failed to create guest session')
+      if (!guestResult) {
+        showError('Failed to create guest session')
         return
       }
       
@@ -118,28 +118,25 @@ async function handleSubmit() {
     }
     
     // Create order
-    const result = await createOrder({
-      shipping: {
-        name: form.value.name,
-        email: form.value.email,
-        phone: form.value.phone,
-        address: form.value.address,
-        city: form.value.city,
-        state: form.value.state,
-        postal: form.value.postal
-      },
-      isGuest: !isAuthenticated.value,
-      guestInfo
+    const result = await placeOrder({
+      name: form.value.name,
+      email: form.value.email,
+      phone: form.value.phone,
+      address: form.value.address,
+      city: form.value.city,
+      state: form.value.state,
+      postal: form.value.postal
     })
     
-    if (result.success) {
+    if (result) {
       orderSuccess.value = true
       orderNumber.value = result.orderNumber
       success('Order placed successfully!')
     } else {
-      showError(result.error || 'Failed to place order')
+      showError('Failed to place order')
     }
   } catch (e) {
+  console.error(e)
     showError('Something went wrong. Please try again.')
   } finally {
     isSubmitting.value = false

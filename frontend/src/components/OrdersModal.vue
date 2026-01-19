@@ -9,11 +9,10 @@ const {
   orders, 
   currentOrder, 
   isLoading, 
-  fetchOrders, 
+  loadOrders, 
   getStatusInfo, 
   formatPrice, 
-  formatDate,
-  closeOrdersModal 
+  formatDate
 } = useOrders()
 const { isAuthenticated } = useAuth()
 
@@ -21,13 +20,13 @@ const isOpen = computed(() => activeModal.value === 'orders')
 
 onMounted(() => {
   if (isAuthenticated.value) {
-    fetchOrders()
+    loadOrders()
   }
 })
 
 function handleClose() {
   closeModal()
-  closeOrdersModal()
+  currentOrder.value = null
 }
 
 function selectOrder(order) {

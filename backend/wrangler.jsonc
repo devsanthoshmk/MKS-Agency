@@ -1,19 +1,39 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "mks-ayurvedic-api",
+	"name": "mks-agency-api",
 	"main": "src/index.js",
 	"compatibility_date": "2026-01-03",
 	"observability": {
 		"enabled": true
 	},
 	"vars": {
+		// Frontend URL for CORS and redirects
 		"FRONTEND_URL": "http://localhost:5173",
-		"EMAIL_SERVER_URL": "http://localhost:3001"
+		// Email server for notifications (optional)
+		"EMAIL_SERVER_URL": "http://localhost:3001",
+		// Convex deployment URL (get from Convex dashboard)
+		"CONVEX_URL": "https://tame-ermine-520.convex.cloud",
+		// GitHub repo for products.json updates (format: owner/repo)
+		"GITHUB_REPO": "YOUR_GITHUB_USERNAME/MKS-Agency",
+		// Fallback admin passcode (prefer using ADMIN_SECRETS KV)
+		"ADMIN_PASSCODE": "mksagency-admin"
 	},
 	"kv_namespaces": [
+		// Rate limiting storage
 		{
 			"binding": "RATE_LIMIT",
-			"id": "YOUR_KV_NAMESPACE_ID"
+			"id": "c96b655c0bbc4c23abfaed566688512e",
+			"remote": true
+		},
+		// Admin secrets (passcode, github_pat)
+		{
+			"binding": "ADMIN_SECRETS",
+			"id": "eceb5a6192074b57b13edbf6c174ea45",
+			"remote": true
 		}
 	]
+	// SECRETS (add via `wrangler secret put`):
+	// - JWT_SECRET: Random 32+ character string for signing JWTs
+	// - CONVEX_ADMIN_KEY: Get from Convex dashboard > Settings > Deploy key
+	// - GITHUB_TOKEN: GitHub Personal Access Token with repo contents:write scope
 }

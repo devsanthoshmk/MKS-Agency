@@ -20,25 +20,25 @@ app.use(express.json())
 
 // Create nodemailer transporter
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD
-    }
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD
+  }
 })
 
 // Verify transporter on startup
 transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ Email transporter error:', error)
-    } else {
-        console.log('✅ Email server ready to send emails')
-    }
+  if (error) {
+    console.error('❌ Email transporter error:', error)
+  } else {
+    console.log('✅ Email server ready to send emails')
+  }
 })
 
 // HTML Email Templates
 const templates = {
-    orderConfirmation: (data) => `
+  orderConfirmation: (data) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -108,7 +108,7 @@ const templates = {
     </html>
   `,
 
-    statusUpdate: (data) => `
+  statusUpdate: (data) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -160,7 +160,7 @@ const templates = {
     </html>
   `,
 
-    adminAlert: (data) => `
+  adminAlert: (data) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -195,7 +195,7 @@ const templates = {
     </html>
   `,
 
-    guestVerification: (data) => `
+  guestVerification: (data) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -226,6 +226,44 @@ const templates = {
       </div>
     </body>
     </html>
+  `,
+
+  emailLogin: (data) => `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Sign In to MKS Ayurvedic</title>
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f5f5f4; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 16px; padding: 32px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        .logo span { display: inline-block; width: 60px; height: 60px; background: linear-gradient(135deg, #059669, #047857); border-radius: 50%; line-height: 60px; color: white; font-size: 28px; font-weight: bold; }
+        h1 { color: #1c1917; font-size: 24px; margin: 24px 0 8px; }
+        p { color: #78716c; line-height: 1.6; }
+        .button { display: inline-block; background: linear-gradient(135deg, #059669, #047857); color: white; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-weight: 600; margin: 24px 0; }
+        .security-note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; margin: 20px 0; }
+        .security-note p { color: #1e40af; font-size: 14px; margin: 0; }
+        .footer { margin-top: 24px; font-size: 12px; color: #a8a29e; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="card">
+          <div class="logo"><span>M</span></div>
+          <h1>Sign In to Your Account</h1>
+          <p>Click the button below to securely sign in to MKS Ayurvedic. No password needed!</p>
+          <a href="${data.loginLink}" class="button">Sign In Now</a>
+          <div class="security-note">
+            <p>🔒 This is a secure, one-time login link. It will expire in 24 hours.</p>
+          </div>
+          <p style="font-size: 14px;">Or copy this link: ${data.loginLink}</p>
+          <p class="footer">If you didn't request this, you can safely ignore this email.<br>MKS Ayurvedic | 100% Natural Wellness</p>
+        </div>
+      </div>
+    </body>
+    </html>
   `
 }
 
@@ -233,91 +271,112 @@ const templates = {
 
 // Health check
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
 // Send order confirmation
 app.post('/send/order-confirmation', async (req, res) => {
-    try {
-        const { to, name, orderNumber, items, total } = req.body
+  try {
+    const { to, name, orderNumber, items, total } = req.body
 
-        await transporter.sendMail({
-            from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
-            to,
-            subject: `Order Confirmed - ${orderNumber}`,
-            html: templates.orderConfirmation({ name, orderNumber, items, total })
-        })
+    await transporter.sendMail({
+      from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: `Order Confirmed - ${orderNumber}`,
+      html: templates.orderConfirmation({ name, orderNumber, items, total })
+    })
 
-        console.log(`✉️ Order confirmation sent to ${to}`)
-        res.json({ success: true })
-    } catch (error) {
-        console.error('Order confirmation error:', error)
-        res.status(500).json({ error: 'Failed to send email' })
-    }
+    console.log(`✉️ Order confirmation sent to ${to}`)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Order confirmation error:', error)
+    res.status(500).json({ error: 'Failed to send email' })
+  }
 })
 
 // Send status update
 app.post('/send/status-update', async (req, res) => {
-    try {
-        const { to, orderNumber, status, statusLabel, statusDescription, trackingUrl } = req.body
+  try {
+    const { to, orderNumber, status, statusLabel, statusDescription, trackingUrl } = req.body
 
-        await transporter.sendMail({
-            from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
-            to,
-            subject: `Order Update - ${orderNumber}: ${statusLabel}`,
-            html: templates.statusUpdate({ orderNumber, statusLabel, statusDescription, trackingUrl })
-        })
+    await transporter.sendMail({
+      from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: `Order Update - ${orderNumber}: ${statusLabel}`,
+      html: templates.statusUpdate({ orderNumber, statusLabel, statusDescription, trackingUrl })
+    })
 
-        console.log(`✉️ Status update sent to ${to}`)
-        res.json({ success: true })
-    } catch (error) {
-        console.error('Status update error:', error)
-        res.status(500).json({ error: 'Failed to send email' })
-    }
+    console.log(`✉️ Status update sent to ${to}`)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Status update error:', error)
+    res.status(500).json({ error: 'Failed to send email' })
+  }
 })
 
 // Send admin alert
 app.post('/send/admin-alert', async (req, res) => {
-    try {
-        const { type, orderNumber, customerName, total } = req.body
-        const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER
+  try {
+    const { type, orderNumber, customerName, total } = req.body
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER
 
-        await transporter.sendMail({
-            from: `"MKS Ayurvedic System" <${process.env.GMAIL_USER}>`,
-            to: adminEmail,
-            subject: `🔔 ${type === 'new-order' ? 'New Order' : 'Order Update'} - ${orderNumber}`,
-            html: templates.adminAlert({ type, orderNumber, customerName, total })
-        })
+    await transporter.sendMail({
+      from: `"MKS Ayurvedic System" <${process.env.GMAIL_USER}>`,
+      to: adminEmail,
+      subject: `🔔 ${type === 'new-order' ? 'New Order' : 'Order Update'} - ${orderNumber}`,
+      html: templates.adminAlert({ type, orderNumber, customerName, total })
+    })
 
-        console.log(`✉️ Admin alert sent for ${orderNumber}`)
-        res.json({ success: true })
-    } catch (error) {
-        console.error('Admin alert error:', error)
-        res.status(500).json({ error: 'Failed to send email' })
-    }
+    console.log(`✉️ Admin alert sent for ${orderNumber}`)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Admin alert error:', error)
+    res.status(500).json({ error: 'Failed to send email' })
+  }
 })
 
 // Send guest verification
 app.post('/send/guest-verification', async (req, res) => {
-    try {
-        const { to, name, verificationLink } = req.body
+  try {
+    const { to, name, verificationLink } = req.body
 
-        await transporter.sendMail({
-            from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
-            to,
-            subject: 'Verify Your Email - MKS Ayurvedic',
-            html: templates.guestVerification({ name, verificationLink })
-        })
+    await transporter.sendMail({
+      from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: 'Verify Your Email - MKS Ayurvedic',
+      html: templates.guestVerification({ name, verificationLink })
+    })
 
-        console.log(`✉️ Verification email sent to ${to}`)
-        res.json({ success: true })
-    } catch (error) {
-        console.error('Verification email error:', error)
-        res.status(500).json({ error: 'Failed to send email' })
-    }
+    console.log(`✉️ Verification email sent to ${to}`)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Verification email error:', error)
+    res.status(500).json({ error: 'Failed to send email' })
+  }
+})
+
+// Send email login link
+app.post('/send/email-login', async (req, res) => {
+  try {
+    const { to, loginLink } = req.body
+
+    await transporter.sendMail({
+      from: `"MKS Ayurvedic" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: 'Sign In to MKS Ayurvedic',
+      html: templates.emailLogin({ loginLink })
+    })
+
+    console.log(`✉️ Login email sent to ${to}`)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Email login error:', error)
+    res.status(500).json({ error: 'Failed to send email' })
+  }
 })
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`📧 Email server running on http://localhost:${PORT}`)
+  console.log(`📧 Email server running on http://localhost:${PORT}`)
 })
+

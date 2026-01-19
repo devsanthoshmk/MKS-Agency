@@ -15,6 +15,7 @@ const { loadProducts, getProductBySlug } = useProducts()
 const HomePage = () => import('./views/HomePage.vue')
 const AdminDashboard = () => import('./views/AdminDashboard.vue')
 const GuestVerification = () => import('./views/GuestVerification.vue')
+const LoginVerification = () => import('./views/LoginVerification.vue')
 
 // Router Configuration
 const router = createRouter({
@@ -64,6 +65,12 @@ const router = createRouter({
             name: 'guest-verify',
             component: GuestVerification,
             meta: { title: 'Verify Your Order - MKS Ayurvedic' }
+        },
+        {
+            path: '/login/:token',
+            name: 'email-login',
+            component: LoginVerification,
+            meta: { title: 'Sign In - MKS Ayurvedic' }
         },
         {
             path: '/admin',

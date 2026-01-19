@@ -3,10 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useUI } from '../composables/useUI'
 
-const { isAuthModalOpen, closeAuthModal, loginWithGoogle, isLoading, error } = useAuth()
+const { isAuthModalOpen, closeAuthModal, loginWithGoogle, sendLoginEmail, isLoading, error } = useAuth()
 const { success } = useUI()
 
 const googleLoaded = ref(false)
+const emailInput = ref('')
+const emailError = ref('')
+const emailSent = ref(false)
+const emailSentTo = ref('')
 
 onMounted(() => {
   // Load Google Sign-In script
@@ -58,11 +62,47 @@ function renderGoogleButton() {
   }
 }
 
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+async function handleEmailSubmit() {
+  emailError.value = ''
+  
+  if (!emailInput.value.trim()) {
+    emailError.value = 'Please enter your email'
+    return
+  }
+  
+  if (!validateEmail(emailInput.value)) {
+    emailError.value = 'Please enter a valid email'
+    return
+  }
+  
+  const result = await sendLoginEmail(emailInput.value)
+  
+  if (result.success) {
+    emailSent.value = true
+    emailSentTo.value = emailInput.value
+    success('Login link sent!')
+  } else {
+    emailError.value = result.error || 'Failed to send login link'
+  }
+}
+
+function resetEmailState() {
+  emailSent.value = false
+  emailSentTo.value = ''
+  emailInput.value = ''
+  emailError.value = ''
+}
+
 // Re-render button when modal opens
 import { watch } from 'vue'
 watch(isAuthModalOpen, (open) => {
   if (open) {
     setTimeout(renderGoogleButton, 100)
+    resetEmailState()
   }
 })
 </script>
@@ -129,6 +169,68 @@ watch(isAuthModalOpen, (open) => {
               <div class="w-full border-t border-surface-200" />
             </div>
             <div class="relative flex justify-center text-sm">
+              <span class="px-4 bg-white text-surface-400">or sign in with email</span>
+            </div>
+          </div>
+          
+          <!-- Email Login Section -->
+          <div class="bg-surface-50 rounded-xl p-4 text-left mb-6">
+            <template v-if="!emailSent">
+              <h3 class="font-semibold text-surface-900 mb-2">Sign in with Email</h3>
+              <p class="text-sm text-surface-600 mb-3">
+                Enter your email and we'll send you a secure login link.
+              </p>
+              <form @submit.prevent="handleEmailSubmit" class="space-y-3">
+                <div>
+                  <input
+                    v-model="emailInput"
+                    type="email"
+                    placeholder="your@email.com"
+                    class="w-full px-4 py-3 border border-surface-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                    :class="{ 'border-red-400 bg-red-50': emailError }"
+                    :disabled="isLoading"
+                  />
+                  <p v-if="emailError" class="text-red-500 text-xs mt-1">{{ emailError }}</p>
+                </div>
+                <button 
+                  type="submit"
+                  class="btn btn-primary w-full"
+                  :disabled="isLoading"
+                >
+                  <span v-if="isLoading" class="spinner mr-2" />
+                  {{ isLoading ? 'Sending...' : 'Send Login Link' }}
+                </button>
+              </form>
+            </template>
+            <template v-else>
+              <!-- Success State -->
+              <div class="text-center py-2">
+                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+                  <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 class="font-semibold text-surface-900 mb-1">Check Your Email!</h3>
+                <p class="text-sm text-surface-600 mb-3">
+                  We've sent a login link to<br>
+                  <strong class="text-primary-700">{{ emailSentTo }}</strong>
+                </p>
+                <button 
+                  class="text-sm text-primary-600 hover:underline"
+                  @click="resetEmailState"
+                >
+                  Use a different email
+                </button>
+              </div>
+            </template>
+          </div>
+          
+          <!-- Divider -->
+          <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-surface-200" />
+            </div>
+            <div class="relative flex justify-center text-sm">
               <span class="px-4 bg-white text-surface-400">or</span>
             </div>
           </div>
@@ -171,3 +273,4 @@ watch(isAuthModalOpen, (open) => {
   opacity: 0;
 }
 </style>
+

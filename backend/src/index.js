@@ -1,9 +1,16 @@
 /**
- * Cloudflare Workers Backend
- * Ayurvedic Ecommerce API
+ * Cloudflare Workers Backend - MKS Agency E-commerce API
+ * 
+ * This backend handles:
+ * - Authentication (Google OAuth, email, guest)
+ * - Order management with Convex database
+ * - Admin operations (order status, products via GitHub)
+ * - Rate limiting via KV
+ * 
+ * @see /docs/BACKEND.md for full documentation
  */
 
-// CORS headers
+// CORS headers for cross-origin requests
 const corsHeaders = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -27,14 +34,80 @@ function error(message, status = 400) {
 	return json({ error: message }, status)
 }
 
-// Simple router
+// ==================== CONVEX HTTP CLIENT ====================
+
+/**
+ * Convex HTTP Client for server-side access
+ * Uses the Convex HTTP API to call queries and mutations
+ */
+class ConvexClient {
+	constructor(url) {
+		this.url = url
+	}
+
+	async query(name, args = {}) {
+		const response = await fetch(`${this.url}/api/query`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				path: name,
+				args,
+				format: 'json',
+			}),
+		})
+
+		if (!response.ok) {
+			const err = await response.text()
+			console.error(`Convex query error (${name}):`, err)
+			throw new Error(`Convex query failed: ${name}`)
+		}
+
+		const result = await response.json()
+		// Handle both {status, value} format and direct value format
+		if (result && typeof result === 'object' && 'value' in result) {
+			return result.value
+		}
+		return result
+	}
+
+	async mutation(name, args = {}) {
+		const response = await fetch(`${this.url}/api/mutation`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				path: name,
+				args,
+				format: 'json',
+			}),
+		})
+
+		if (!response.ok) {
+			const err = await response.text()
+			console.error(`Convex mutation error (${name}):`, err)
+			throw new Error(`Convex mutation failed: ${name}`)
+		}
+
+		const result = await response.json()
+		// Handle both {status, value} format and direct value format
+		if (result && typeof result === 'object' && 'value' in result) {
+			return result.value
+		}
+		return result
+	}
+}
+
+// ==================== ROUTER ====================
+
 class Router {
 	constructor() {
 		this.routes = []
 	}
 
 	add(method, path, handler) {
-		// Convert path params to regex
 		const pattern = path.replace(/:[^/]+/g, '([^/]+)')
 		const regex = new RegExp(`^${pattern}$`)
 		const paramNames = (path.match(/:[^/]+/g) || []).map(p => p.slice(1))
@@ -55,6 +128,9 @@ class Router {
 			return new Response(null, { headers: corsHeaders })
 		}
 
+		// Initialize Convex client
+		const convex = new ConvexClient(env.CONVEX_URL)
+
 		// Find matching route
 		for (const route of this.routes) {
 			if (route.method !== method) continue
@@ -65,7 +141,7 @@ class Router {
 					params[name] = match[i + 1]
 				})
 				try {
-					return await route.handler(request, env, ctx, params)
+					return await route.handler(request, env, ctx, params, convex)
 				} catch (e) {
 					console.error('Route error:', e)
 					return error('Internal server error', 500)
@@ -77,7 +153,8 @@ class Router {
 	}
 }
 
-// JWT utilities
+// ==================== JWT UTILITIES ====================
+
 async function createJWT(payload, secret, expiresIn = 3600) {
 	const header = { alg: 'HS256', typ: 'JWT' }
 	const now = Math.floor(Date.now() / 1000)
@@ -138,7 +215,8 @@ async function verifyJWT(token, secret) {
 	}
 }
 
-// Rate limiting with KV
+// ==================== RATE LIMITING ====================
+
 async function checkRateLimit(env, ip, action, maxAttempts = 5, windowSec = 900) {
 	const key = `rate:${action}:${ip}`
 
@@ -151,7 +229,6 @@ async function checkRateLimit(env, ip, action, maxAttempts = 5, windowSec = 900)
 			}
 
 			if (data.attempts >= maxAttempts) {
-				// Lock for window duration
 				await env.RATE_LIMIT.put(key, JSON.stringify({
 					attempts: data.attempts,
 					lockedUntil: Date.now() + (windowSec * 1000)
@@ -165,7 +242,6 @@ async function checkRateLimit(env, ip, action, maxAttempts = 5, windowSec = 900)
 
 		return { allowed: true, remaining: maxAttempts }
 	} catch (e) {
-		// If KV fails, allow the request
 		return { allowed: true, remaining: maxAttempts }
 	}
 }
@@ -193,14 +269,14 @@ async function resetRateLimit(env, ip, action) {
 	}
 }
 
-// Get client IP
+// ==================== UTILITIES ====================
+
 function getClientIP(request) {
 	return request.headers.get('CF-Connecting-IP') ||
 		request.headers.get('X-Forwarded-For')?.split(',')[0] ||
 		'unknown'
 }
 
-// Auth middleware
 async function requireAuth(request, env) {
 	const authHeader = request.headers.get('Authorization')
 	if (!authHeader?.startsWith('Bearer ')) {
@@ -212,7 +288,6 @@ async function requireAuth(request, env) {
 	return claims
 }
 
-// Admin auth middleware
 async function requireAdmin(request, env) {
 	const claims = await requireAuth(request, env)
 	if (!claims || !claims.isAdmin) {
@@ -221,7 +296,6 @@ async function requireAdmin(request, env) {
 	return claims
 }
 
-// Generate random token
 function generateToken(length = 32) {
 	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 	let result = ''
@@ -232,7 +306,6 @@ function generateToken(length = 32) {
 	return result
 }
 
-// Generate order number
 function generateOrderNumber() {
 	const date = new Date()
 	const datePart = date.toISOString().slice(0, 10).replace(/-/g, '')
@@ -240,7 +313,7 @@ function generateOrderNumber() {
 	return `MKS-${datePart}-${randomPart}`
 }
 
-// Send email via Nodemailer server
+// Send email via external email server
 async function sendEmail(env, type, data) {
 	try {
 		const response = await fetch(`${env.EMAIL_SERVER_URL}/send/${type}`, {
@@ -255,13 +328,20 @@ async function sendEmail(env, type, data) {
 	}
 }
 
-// Create router
+// ==================== ROUTER SETUP ====================
+
 const router = new Router()
 
-// ================== AUTH ROUTES ==================
+// ==================== AUTH ROUTES ====================
 
-// Google OAuth callback
-router.post('/api/auth/google', async (request, env) => {
+/**
+ * Google OAuth callback
+ * POST /api/auth/google
+ * Body: { credential: string } - Google ID token
+ * 
+ * Verifies Google token, creates/updates user in Convex, returns JWT
+ */
+router.post('/api/auth/google', async (request, env, ctx, params, convex) => {
 	try {
 		const { credential } = await request.json()
 		if (!credential) {
@@ -276,32 +356,56 @@ router.post('/api/auth/google', async (request, env) => {
 
 		const googleUser = await googleResponse.json()
 
-		// Create or get user (in real impl, this would hit Neon)
-		const user = {
-			id: googleUser.sub,
+		// Create or update user in Convex
+		const userId = await convex.mutation('mutations:upsertUser', {
 			email: googleUser.email,
 			name: googleUser.name,
-			avatar_url: googleUser.picture,
+			avatarUrl: googleUser.picture,
 			provider: 'google',
-			emailVerified: googleUser.email_verified
-		}
+			providerId: googleUser.sub,
+			emailVerified: googleUser.email_verified === 'true',
+			isGuest: false,
+		})
+
+		// Get full user data
+		const user = await convex.query('queries:getUserByEmail', { email: googleUser.email })
 
 		// Create JWT
 		const token = await createJWT(
-			{ userId: user.id, email: user.email },
+			{
+				userId: String(userId),
+				email: googleUser.email,
+				convexUserId: String(userId),
+			},
 			env.JWT_SECRET,
 			86400 // 24 hours
 		)
 
-		return json({ user, token })
+		return json({
+			user: {
+				id: userId,
+				email: user.email,
+				name: user.name,
+				avatarUrl: user.avatarUrl,
+				provider: 'google',
+				emailVerified: user.emailVerified,
+			},
+			token
+		})
 	} catch (e) {
 		console.error('Google auth error:', e)
 		return error('Authentication failed', 500)
 	}
 })
 
-// Guest session
-router.post('/api/auth/guest', async (request, env) => {
+/**
+ * Guest session creation
+ * POST /api/auth/guest
+ * Body: { name, email, phone }
+ * 
+ * Creates guest user with verification token
+ */
+router.post('/api/auth/guest', async (request, env, ctx, params, convex) => {
 	try {
 		const { name, email, phone } = await request.json()
 
@@ -312,24 +416,21 @@ router.post('/api/auth/guest', async (request, env) => {
 		// Generate verification token
 		const verificationToken = generateToken(48)
 
-		// Create guest user (in real impl, this would hit Neon)
-		const guestId = crypto.randomUUID()
-		const guestUser = {
-			id: guestId,
-			name,
+		// Create guest user in Convex
+		const userId = await convex.mutation('mutations:createGuestUser', {
 			email,
+			name,
 			phone,
-			isGuest: true,
-			isVerified: false,
-			verificationToken
-		}
+			verificationToken,
+		})
 
 		// Create JWT
 		const token = await createJWT(
 			{
-				guestId,
+				guestId: String(userId),
 				email,
-				isGuest: true
+				isGuest: true,
+				convexUserId: String(userId),
 			},
 			env.JWT_SECRET,
 			86400 // 24 hours
@@ -343,7 +444,14 @@ router.post('/api/auth/guest', async (request, env) => {
 		})
 
 		return json({
-			user: guestUser,
+			user: {
+				id: userId,
+				name,
+				email,
+				phone,
+				isGuest: true,
+				isVerified: false,
+			},
 			token,
 			verificationRequired: true,
 			verificationMethod: 'email'
@@ -354,8 +462,12 @@ router.post('/api/auth/guest', async (request, env) => {
 	}
 })
 
-// Verify guest email
-router.post('/api/auth/verify-guest', async (request, env) => {
+/**
+ * Verify guest email
+ * POST /api/auth/verify-guest
+ * Body: { token: string }
+ */
+router.post('/api/auth/verify-guest', async (request, env, ctx, params, convex) => {
 	try {
 		const { token } = await request.json()
 
@@ -363,15 +475,143 @@ router.post('/api/auth/verify-guest', async (request, env) => {
 			return error('Verification token required')
 		}
 
-		// In real impl, verify token against database
-		// For now, just return success
-		return json({ verified: true })
+		const result = await convex.mutation('mutations:verifyGuestUser', {
+			verificationToken: token,
+		})
+
+		if (!result.success) {
+			return error(result.error || 'Verification failed')
+		}
+
+		return json({ verified: true, userId: result.userId })
 	} catch (e) {
 		return error('Verification failed', 500)
 	}
 })
 
-// Verify JWT
+// ==================== EMAIL LOGIN ====================
+
+/**
+ * Send email login link
+ * POST /api/auth/email/send
+ * Body: { email: string }
+ * 
+ * Sends a magic link for passwordless login
+ * Rate limited: 3 attempts per 5 minutes
+ */
+router.post('/api/auth/email/send', async (request, env, ctx, params, convex) => {
+	const ip = getClientIP(request)
+
+	// Check rate limit
+	const rateCheck = await checkRateLimit(env, ip, 'email_login', 3, 300)
+	if (!rateCheck.allowed) {
+		return error(`Too many attempts. Try again in ${rateCheck.retryAfter} seconds.`, 429)
+	}
+
+	try {
+		const { email } = await request.json()
+
+		if (!email) {
+			return error('Email is required')
+		}
+
+		// Basic email validation
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			return error('Please enter a valid email address')
+		}
+
+		// Generate login token
+		const loginToken = generateToken(48)
+
+		console.log('Generated login token:', loginToken.substring(0, 8) + '...')
+
+		// Store token in Convex (creates user if needed)
+		const result = await convex.mutation('mutations:createEmailLoginToken', {
+			email,
+			loginToken,
+		})
+
+		console.log('createEmailLoginToken result:', JSON.stringify(result))
+
+		// Send login email
+		await sendEmail(env, 'email-login', {
+			to: email,
+			loginLink: `${env.FRONTEND_URL}/login/${loginToken}`
+		})
+
+		await incrementRateLimit(env, ip, 'email_login', 300)
+
+		return json({
+			success: true,
+			message: 'Login link sent to your email',
+			isNewUser: result?.isNew ?? false
+		})
+	} catch (e) {
+		console.error('Email login send error:', e)
+		return error('Failed to send login link', 500)
+	}
+})
+
+/**
+ * Verify email login token
+ * POST /api/auth/email/verify
+ * Body: { token: string }
+ * 
+ * Verifies the magic link token and returns JWT
+ */
+router.post('/api/auth/email/verify', async (request, env, ctx, params, convex) => {
+	try {
+		const { token } = await request.json()
+
+		if (!token) {
+			return error('Login token required')
+		}
+
+		console.log('Verifying email login token:', token.substring(0, 8) + '...')
+
+		const result = await convex.mutation('mutations:verifyEmailLoginToken', {
+			loginToken: token,
+		})
+
+		console.log('Convex verifyEmailLoginToken result:', JSON.stringify(result))
+
+		if (!result || !result.success) {
+			return error(result?.error || 'Invalid login link')
+		}
+
+		// Create JWT
+		const jwtToken = await createJWT(
+			{
+				userId: String(result.user.id),
+				email: result.user.email,
+				convexUserId: String(result.user.id),
+			},
+			env.JWT_SECRET,
+			86400 * 7 // 7 days for email login
+		)
+
+		return json({
+			user: {
+				id: result.user.id,
+				email: result.user.email,
+				name: result.user.name,
+				phone: result.user.phone,
+				provider: result.user.provider,
+				emailVerified: true,
+			},
+			token: jwtToken
+		})
+	} catch (e) {
+		console.error('Email login verify error:', e)
+		return error('Login verification failed', 500)
+	}
+})
+
+/**
+ * Verify JWT token
+ * GET /api/auth/verify
+ * Header: Authorization: Bearer <token>
+ */
 router.get('/api/auth/verify', async (request, env) => {
 	const claims = await requireAuth(request, env)
 	if (!claims) {
@@ -380,8 +620,15 @@ router.get('/api/auth/verify', async (request, env) => {
 	return json({ valid: true, user: claims })
 })
 
-// ================== ADMIN AUTH ==================
+// ==================== ADMIN AUTH ====================
 
+/**
+ * Admin login
+ * POST /api/admin/login
+ * Body: { passcode: string }
+ * 
+ * Rate limited: 5 attempts per 15 minutes
+ */
 router.post('/api/admin/login', async (request, env) => {
 	const ip = getClientIP(request)
 
@@ -399,8 +646,14 @@ router.post('/api/admin/login', async (request, env) => {
 			return error('Passcode required')
 		}
 
-		// Compare with stored hash (simplified - in real impl use bcrypt)
-		const validPasscode = passcode === 'mksagency-admin' // In prod, compare hashes
+		// Get stored passcode from KV (or use env var as fallback)
+		let validPasscode = false
+		try {
+			const storedPasscode = await env.ADMIN_SECRETS?.get('passcode')
+			validPasscode = storedPasscode ? (passcode === storedPasscode) : (passcode === env.ADMIN_PASSCODE)
+		} catch {
+			validPasscode = passcode === env.ADMIN_PASSCODE
+		}
 
 		if (!validPasscode) {
 			await incrementRateLimit(env, ip, 'admin_login')
@@ -424,12 +677,16 @@ router.post('/api/admin/login', async (request, env) => {
 	}
 })
 
-// ================== ORDERS ==================
+// ==================== ORDER ROUTES ====================
 
-// Create order
-router.post('/api/orders', async (request, env) => {
+/**
+ * Create order
+ * POST /api/orders
+ * Body: { items, shipping, subtotal, shippingFee, total, isGuest, guestInfo }
+ */
+router.post('/api/orders', async (request, env, ctx, params, convex) => {
 	try {
-		const { items, shipping, subtotal, shippingFee, total, isGuest, guestInfo } = await request.json()
+		const { items, shipping, subtotal, shippingFee, total, isGuest } = await request.json()
 
 		if (!items?.length) {
 			return error('Cart is empty')
@@ -440,13 +697,19 @@ router.post('/api/orders', async (request, env) => {
 		}
 
 		const orderNumber = generateOrderNumber()
-		const orderId = crypto.randomUUID()
 
-		const order = {
-			id: orderId,
+		// Get user ID from token if authenticated
+		let userId = null
+		const claims = await requireAuth(request, env)
+		if (claims?.convexUserId) {
+			userId = claims.convexUserId
+		}
+
+		// Create order in Convex
+		const orderId = await convex.mutation('mutations:createOrder', {
 			orderNumber,
-			status: 'PENDING_VERIFICATION',
-			items,
+			userId: userId || undefined,
+			guestEmail: isGuest ? shipping.email : undefined,
 			subtotal,
 			shippingFee,
 			total,
@@ -454,12 +717,19 @@ router.post('/api/orders', async (request, env) => {
 			shippingPhone: shipping.phone,
 			shippingEmail: shipping.email,
 			shippingAddress: shipping.address,
-			shippingCity: shipping.city,
-			shippingState: shipping.state,
-			shippingPostal: shipping.postal,
-			createdAt: new Date().toISOString(),
-			isGuest
-		}
+			shippingCity: shipping.city || '',
+			shippingState: shipping.state || '',
+			shippingPostal: shipping.postal || '',
+			shippingCountry: shipping.country || 'India',
+			items: items.map(item => ({
+				productId: item.id || item.productId,
+				productName: item.name || item.productName,
+				productSlug: item.slug || item.productSlug || item.id,
+				productImage: item.image || item.images?.[0] || item.productImage,
+				productPrice: item.price || item.productPrice,
+				quantity: item.quantity,
+			})),
+		})
 
 		// Send order confirmation email
 		await sendEmail(env, 'order-confirmation', {
@@ -478,13 +748,11 @@ router.post('/api/orders', async (request, env) => {
 			total
 		})
 
-		// Send FCM push to admin (if configured)
-		// await sendFCMNotification(env, { title: 'New Order', body: `Order ${orderNumber}` })
-
 		return json({
 			success: true,
-			order,
+			orderId,
 			orderNumber,
+			status: 'PENDING_VERIFICATION',
 			verificationRequired: isGuest
 		})
 	} catch (e) {
@@ -493,53 +761,141 @@ router.post('/api/orders', async (request, env) => {
 	}
 })
 
-// Get user orders
-router.get('/api/orders', async (request, env) => {
+/**
+ * Get user's orders
+ * GET /api/orders
+ * Header: Authorization: Bearer <token>
+ */
+router.get('/api/orders', async (request, env, ctx, params, convex) => {
 	const claims = await requireAuth(request, env)
 	if (!claims) {
 		return error('Unauthorized', 401)
 	}
 
-	// In real impl, fetch from Neon with RLS
-	return json({ orders: [] })
+	try {
+		if (!claims.convexUserId) {
+			return json({ orders: [] })
+		}
+
+		const orders = await convex.query('queries:getUserOrders', {
+			userId: claims.convexUserId,
+		})
+
+		return json({ orders })
+	} catch (e) {
+		console.error('Get orders error:', e)
+		return json({ orders: [] })
+	}
 })
 
-// Get single order
-router.get('/api/orders/:id', async (request, env, ctx, params) => {
+/**
+ * Get single order by ID
+ * GET /api/orders/:id
+ */
+router.get('/api/orders/:id', async (request, env, ctx, params, convex) => {
 	const claims = await requireAuth(request, env)
 	if (!claims) {
 		return error('Unauthorized', 401)
 	}
 
-	// In real impl, fetch from Neon with RLS
-	return json({ order: null })
-})
+	try {
+		const order = await convex.query('queries:getOrderById', {
+			orderId: params.id,
+		})
 
-// ================== ADMIN ORDERS ==================
+		if (!order) {
+			return error('Order not found', 404)
+		}
 
-// Get all orders (admin)
-router.get('/api/admin/orders', async (request, env) => {
-	const admin = await requireAdmin(request, env)
-	if (!admin) {
-		return error('Unauthorized', 401)
+		// Check ownership
+		if (order.userId !== claims.convexUserId && order.guestEmail !== claims.email) {
+			return error('Unauthorized', 403)
+		}
+
+		return json({ order })
+	} catch (e) {
+		console.error('Get order error:', e)
+		return error('Failed to get order', 500)
 	}
-
-	// In real impl, fetch all orders from Neon with service role
-	return json({ orders: [] })
 })
 
-// Update order status (admin)
-router.put('/api/admin/orders/:id/status', async (request, env, ctx, params) => {
+/**
+ * Track order by order number (public)
+ * GET /api/orders/track/:orderNumber
+ */
+router.get('/api/orders/track/:orderNumber', async (request, env, ctx, params, convex) => {
+	try {
+		const order = await convex.query('queries:getOrderByNumber', {
+			orderNumber: params.orderNumber,
+		})
+
+		if (!order) {
+			return error('Order not found', 404)
+		}
+
+		// Return limited info for public tracking
+		return json({
+			orderNumber: order.orderNumber,
+			status: order.status,
+			createdAt: order.createdAt,
+			shippedAt: order.shippedAt,
+			deliveredAt: order.deliveredAt,
+			trackingUrl: order.trackingUrl,
+			trackingNumber: order.trackingNumber,
+			courierName: order.courierName,
+			history: order.history,
+		})
+	} catch (e) {
+		console.error('Track order error:', e)
+		return error('Failed to track order', 500)
+	}
+})
+
+// ==================== ADMIN ORDERS ====================
+
+/**
+ * Get all orders (admin)
+ * GET /api/admin/orders
+ * Query: ?status=PENDING_VERIFICATION&limit=50
+ */
+router.get('/api/admin/orders', async (request, env, ctx, params, convex) => {
 	const admin = await requireAdmin(request, env)
 	if (!admin) {
 		return error('Unauthorized', 401)
 	}
 
 	try {
-		const { status, trackingUrl, trackingNumber, courierName, note } = await request.json()
+		const url = new URL(request.url)
+		const status = url.searchParams.get('status')
+		const limit = parseInt(url.searchParams.get('limit') || '50')
+
+		const orders = await convex.query('queries:getAllOrders', {
+			status: status || undefined,
+			limit,
+		})
+
+		return json({ orders })
+	} catch (e) {
+		console.error('Admin get orders error:', e)
+		return json({ orders: [] })
+	}
+})
+
+/**
+ * Update order status (admin)
+ * PUT /api/admin/orders/:id/status
+ * Body: { status, trackingUrl, trackingNumber, courierName, note }
+ */
+router.put('/api/admin/orders/:id/status', async (request, env, ctx, params, convex) => {
+	const admin = await requireAdmin(request, env)
+	if (!admin) {
+		return error('Unauthorized', 401)
+	}
+
+	try {
+		const { status, trackingUrl, trackingNumber, courierName, note, failureReason, cancellationReason, adminNotes } = await request.json()
 		const orderId = params.id
 
-		// Validate status transition
 		const validStatuses = [
 			'PENDING_VERIFICATION',
 			'PAYMENT_VERIFIED',
@@ -554,29 +910,81 @@ router.put('/api/admin/orders/:id/status', async (request, env, ctx, params) => 
 			return error('Invalid status')
 		}
 
-		// In real impl, update in Neon with service role
-		const updatedOrder = {
-			id: orderId,
+		await convex.mutation('mutations:updateOrderStatus', {
+			orderId,
 			status,
-			trackingUrl,
-			trackingNumber,
-			courierName,
-			updatedAt: new Date().toISOString()
+			trackingUrl: trackingUrl || undefined,
+			trackingNumber: trackingNumber || undefined,
+			courierName: courierName || undefined,
+			note: note || undefined,
+			failureReason: failureReason || undefined,
+			cancellationReason: cancellationReason || undefined,
+			adminNotes: adminNotes || undefined,
+		})
+
+		// Get updated order to send email notification
+		const order = await convex.query('queries:getOrderById', { orderId })
+
+		// Send status update email
+		if (order && ['PAYMENT_VERIFIED', 'SHIPPED', 'DELIVERED'].includes(status)) {
+			await sendEmail(env, 'status-update', {
+				to: order.shippingEmail,
+				name: order.shippingName,
+				orderNumber: order.orderNumber,
+				status,
+				trackingUrl,
+				trackingNumber,
+				courierName,
+			})
 		}
 
-		// Send status update email to customer
-		// await sendEmail(env, 'status-update', { ... })
-
-		return json({ success: true, order: updatedOrder })
+		return json({ success: true, order })
 	} catch (e) {
 		console.error('Status update error:', e)
 		return error('Failed to update status', 500)
 	}
 })
 
-// ================== ADMIN PRODUCTS ==================
+/**
+ * Get order analytics (admin)
+ * GET /api/admin/analytics
+ */
+router.get('/api/admin/analytics', async (request, env, ctx, params, convex) => {
+	const admin = await requireAdmin(request, env)
+	if (!admin) {
+		return error('Unauthorized', 401)
+	}
 
-// Update product (commits to GitHub)
+	try {
+		const analytics = await convex.query('queries:getOrderAnalytics', {})
+		return json(analytics)
+	} catch (e) {
+		console.error('Analytics error:', e)
+		return json({
+			totalOrders: 0,
+			pendingVerification: 0,
+			paymentVerified: 0,
+			processing: 0,
+			shipped: 0,
+			delivered: 0,
+			cancelled: 0,
+			failed: 0,
+			verifiedRevenue: 0,
+			completedRevenue: 0,
+			ordersToday: 0,
+			ordersWeek: 0,
+			ordersMonth: 0
+		})
+	}
+})
+
+// ==================== ADMIN PRODUCTS ====================
+
+/**
+ * Update products (commits to GitHub)
+ * PUT /api/admin/products
+ * Body: { products: [...] }
+ */
 router.put('/api/admin/products', async (request, env) => {
 	const admin = await requireAdmin(request, env)
 	if (!admin) {
@@ -594,14 +1002,25 @@ router.put('/api/admin/products', async (request, env) => {
 			products
 		}
 
+		// Get GitHub token from secrets KV or env
+		let githubToken = env.GITHUB_TOKEN
+		try {
+			const kvToken = await env.ADMIN_SECRETS?.get('github_pat')
+			if (kvToken) githubToken = kvToken
+		} catch { }
+
+		if (!githubToken) {
+			return error('GitHub token not configured', 500)
+		}
+
 		// Get current file SHA from GitHub
 		const getResponse = await fetch(
 			`https://api.github.com/repos/${env.GITHUB_REPO}/contents/frontend/src/assets/products.json`,
 			{
 				headers: {
-					'Authorization': `token ${env.GITHUB_TOKEN}`,
+					'Authorization': `token ${githubToken}`,
 					'Accept': 'application/vnd.github.v3+json',
-					'User-Agent': 'MKS-Ayurvedic-Admin'
+					'User-Agent': 'MKS-Agency-Admin'
 				}
 			}
 		)
@@ -618,14 +1037,14 @@ router.put('/api/admin/products', async (request, env) => {
 			{
 				method: 'PUT',
 				headers: {
-					'Authorization': `token ${env.GITHUB_TOKEN}`,
+					'Authorization': `token ${githubToken}`,
 					'Accept': 'application/vnd.github.v3+json',
-					'User-Agent': 'MKS-Ayurvedic-Admin',
+					'User-Agent': 'MKS-Agency-Admin',
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
 					message: `Update products - ${new Date().toISOString()}`,
-					content: btoa(JSON.stringify(productData, null, 2)),
+					content: btoa(unescape(encodeURIComponent(JSON.stringify(productData, null, 2)))),
 					sha,
 					branch: 'main'
 				})
@@ -645,33 +1064,90 @@ router.put('/api/admin/products', async (request, env) => {
 	}
 })
 
-// ================== ADMIN ANALYTICS ==================
+// ==================== CART & WISHLIST (Convex sync) ====================
 
-router.get('/api/admin/analytics', async (request, env) => {
-	const admin = await requireAdmin(request, env)
-	if (!admin) {
+/**
+ * Sync cart from localStorage to Convex
+ * POST /api/cart/sync
+ * Body: { items: [...] }
+ */
+router.post('/api/cart/sync', async (request, env, ctx, params, convex) => {
+	const claims = await requireAuth(request, env)
+	if (!claims?.convexUserId) {
 		return error('Unauthorized', 401)
 	}
 
-	// In real impl, fetch from Neon analytics view
-	return json({
-		totalOrders: 0,
-		pendingVerification: 0,
-		paymentVerified: 0,
-		processing: 0,
-		shipped: 0,
-		delivered: 0,
-		cancelled: 0,
-		failed: 0,
-		verifiedRevenue: 0,
-		completedRevenue: 0,
-		ordersToday: 0,
-		ordersWeek: 0,
-		ordersMonth: 0
-	})
+	try {
+		const { items } = await request.json()
+
+		for (const item of items) {
+			await convex.mutation('mutations:addToCart', {
+				userId: claims.convexUserId,
+				productId: item.id || item.productId,
+				productData: {
+					id: item.id,
+					slug: item.slug,
+					name: item.name,
+					price: item.price,
+					comparePrice: item.comparePrice,
+					image: item.images?.[0] || item.image,
+					category: item.category,
+				},
+				quantity: item.quantity || 1,
+			})
+		}
+
+		const cart = await convex.query('queries:getCart', { userId: claims.convexUserId })
+		return json({ success: true, cart })
+	} catch (e) {
+		console.error('Cart sync error:', e)
+		return error('Failed to sync cart', 500)
+	}
 })
 
-// ================== MAIN HANDLER ==================
+/**
+ * Get cart
+ * GET /api/cart
+ */
+router.get('/api/cart', async (request, env, ctx, params, convex) => {
+	const claims = await requireAuth(request, env)
+	if (!claims?.convexUserId) {
+		return error('Unauthorized', 401)
+	}
+
+	try {
+		const cart = await convex.query('queries:getCart', { userId: claims.convexUserId })
+		return json({ cart })
+	} catch (e) {
+		return json({ cart: [] })
+	}
+})
+
+/**
+ * Clear cart
+ * DELETE /api/cart
+ */
+router.delete('/api/cart', async (request, env, ctx, params, convex) => {
+	const claims = await requireAuth(request, env)
+	if (!claims?.convexUserId) {
+		return error('Unauthorized', 401)
+	}
+
+	try {
+		await convex.mutation('mutations:clearCart', { userId: claims.convexUserId })
+		return json({ success: true })
+	} catch (e) {
+		return error('Failed to clear cart', 500)
+	}
+})
+
+// ==================== HEALTH CHECK ====================
+
+router.get('/api/health', async () => {
+	return json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+// ==================== MAIN HANDLER ====================
 
 export default {
 	async fetch(request, env, ctx) {

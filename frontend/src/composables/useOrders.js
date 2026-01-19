@@ -1,268 +1,332 @@
 /**
  * Orders Composable
- * Handles order creation and status tracking
+ * 
+ * Handles order placement, tracking, and history.
+ * Integrates with the Cloudflare Worker backend + Convex.
+ * 
+ * Usage:
+ *   import { useOrders } from '@/composables/useOrders'
+ *   const { orders, placeOrder, trackOrder } = useOrders()
+ * 
+ * @see /docs/FRONTEND.md for full documentation
  */
 
 import { ref, computed } from 'vue'
-import { useAuth } from './useAuth'
-import { useCart } from './useCart'
+import { useAuth } from '@/composables/useAuth'
+import { useCart } from '@/composables/useCart'
 
-const API_BASE = '/api'
+// ==================== CONSTANTS ====================
 
-// Orders state
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+
+// ==================== STATE ====================
+
 const orders = ref([])
 const currentOrder = ref(null)
 const isLoading = ref(false)
 const error = ref(null)
-const isOrdersModalOpen = ref(false)
 
-// Order status labels and colors
+// ==================== COMPUTED ====================
+
+const pendingOrders = computed(() =>
+    orders.value.filter(o => ['PENDING_VERIFICATION', 'PAYMENT_VERIFIED', 'PROCESSING'].includes(o.status))
+)
+
+const completedOrders = computed(() =>
+    orders.value.filter(o => o.status === 'DELIVERED')
+)
+
+const activeOrders = computed(() =>
+    orders.value.filter(o => !['DELIVERED', 'CANCELLED', 'FAILED'].includes(o.status))
+)
+
+// ==================== ORDER STATUS HELPERS ====================
+
 const ORDER_STATUSES = {
     PENDING_VERIFICATION: {
-        label: 'Awaiting Payment Verification',
+        label: 'Pending Verification',
+        description: 'Waiting for payment verification',
         color: 'warning',
-        icon: '⏳',
-        description: 'We will contact you shortly to verify your payment.'
+        icon: '⏳'
     },
     PAYMENT_VERIFIED: {
         label: 'Payment Verified',
-        color: 'success',
-        icon: '✓',
-        description: 'Your payment has been verified. Order is being prepared.'
+        description: 'Payment confirmed, preparing order',
+        color: 'info',
+        icon: '✓'
     },
     PROCESSING: {
         label: 'Processing',
+        description: 'Order is being prepared',
         color: 'info',
-        icon: '📦',
-        description: 'Your order is being packed and prepared for shipping.'
+        icon: '📦'
     },
     SHIPPED: {
         label: 'Shipped',
+        description: 'Order is on the way',
         color: 'primary',
-        icon: '🚚',
-        description: 'Your order is on its way!'
+        icon: '🚚'
     },
     DELIVERED: {
         label: 'Delivered',
+        description: 'Order delivered successfully',
         color: 'success',
-        icon: '✅',
-        description: 'Your order has been delivered successfully.'
+        icon: '✅'
     },
     CANCELLED: {
         label: 'Cancelled',
+        description: 'Order was cancelled',
         color: 'error',
-        icon: '❌',
-        description: 'This order has been cancelled.'
+        icon: '❌'
     },
     FAILED: {
         label: 'Failed',
+        description: 'Order failed',
         color: 'error',
-        icon: '⚠️',
-        description: 'There was an issue with this order.'
+        icon: '⚠️'
     }
 }
 
-export function useOrders() {
-    const { token, getAuthHeader, isAuthenticated } = useAuth()
-    const { getCheckoutItems, clearCart } = useCart()
+function getStatusInfo(status) {
+    return ORDER_STATUSES[status] || {
+        label: status,
+        description: '',
+        color: 'default',
+        icon: '•'
+    }
+}
 
-    // Fetch user orders
-    async function fetchOrders() {
-        if (!isAuthenticated.value) {
-            orders.value = []
-            return
-        }
+// ==================== API METHODS ====================
 
-        isLoading.value = true
-        error.value = null
+/**
+ * Place a new order
+ */
+async function placeOrder(shippingInfo) {
+    const { getToken } = useAuth()
+    const { items, subtotal, clearCart, getCheckoutItems } = useCart()
 
-        try {
-            const response = await fetch(`${API_BASE}/orders`, {
-                headers: getAuthHeader()
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch orders')
-            }
-
-            const data = await response.json()
-            orders.value = data.orders || []
-        } catch (e) {
-            error.value = e.message || 'Failed to fetch orders'
-            console.error('Fetch orders error:', e)
-        } finally {
-            isLoading.value = false
-        }
+    if (!items.value.length) {
+        error.value = 'Cart is empty'
+        return null
     }
 
-    // Create new order
-    async function createOrder(orderData) {
-        isLoading.value = true
-        error.value = null
+    isLoading.value = true
+    error.value = null
 
-        try {
-            const cartItems = getCheckoutItems()
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+        }
 
-            if (!cartItems.length) {
-                throw new Error('Cart is empty')
-            }
+        const token = getToken()
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`
+        }
 
-            const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
-            const shippingFee = subtotal >= 500 ? 0 : 50 // Free shipping above ₹500
-            const total = subtotal + shippingFee
+        // Calculate shipping fee (can be dynamic based on location)
+        const shippingFee = 50 // Fixed ₹50 shipping
+        const total = subtotal.value + shippingFee
 
-            const response = await fetch(`${API_BASE}/orders`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...getAuthHeader()
+        const response = await fetch(`${API_URL}/api/orders`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                items: items.value.map(item => ({
+                    id: item.product.id,
+                    name: item.product.name,
+                    slug: item.product.slug,
+                    price: item.product.price,
+                    images: item.product.images,
+                    quantity: item.quantity,
+                })),
+                shipping: {
+                    name: shippingInfo.name,
+                    email: shippingInfo.email,
+                    phone: shippingInfo.phone,
+                    address: shippingInfo.address,
+                    city: shippingInfo.city,
+                    state: shippingInfo.state,
+                    postal: shippingInfo.postal,
+                    country: shippingInfo.country || 'India',
                 },
-                body: JSON.stringify({
-                    items: cartItems,
-                    shipping: orderData.shipping,
-                    subtotal,
-                    shippingFee,
-                    total,
-                    isGuest: orderData.isGuest || false,
-                    guestInfo: orderData.guestInfo || null
-                })
-            })
-
-            if (!response.ok) {
-                const err = await response.json()
-                throw new Error(err.message || 'Failed to create order')
-            }
-
-            const data = await response.json()
-
-            // Clear cart after successful order
-            clearCart()
-
-            // Add to orders list
-            orders.value.unshift(data.order)
-            currentOrder.value = data.order
-
-            return {
-                success: true,
-                order: data.order,
-                orderNumber: data.order.orderNumber,
-                verificationRequired: data.verificationRequired
-            }
-        } catch (e) {
-            error.value = e.message || 'Failed to create order'
-            return { success: false, error: error.value }
-        } finally {
-            isLoading.value = false
-        }
-    }
-
-    // Get order by ID
-    async function getOrder(orderId) {
-        isLoading.value = true
-        error.value = null
-
-        try {
-            const response = await fetch(`${API_BASE}/orders/${orderId}`, {
-                headers: getAuthHeader()
-            })
-
-            if (!response.ok) {
-                throw new Error('Order not found')
-            }
-
-            const data = await response.json()
-            currentOrder.value = data.order
-            return data.order
-        } catch (e) {
-            error.value = e.message || 'Failed to fetch order'
-            return null
-        } finally {
-            isLoading.value = false
-        }
-    }
-
-    // Get order status info
-    function getStatusInfo(status) {
-        return ORDER_STATUSES[status] || {
-            label: status,
-            color: 'default',
-            icon: '•',
-            description: ''
-        }
-    }
-
-    // Open/close orders modal
-    function openOrdersModal(order = null) {
-        if (order) {
-            currentOrder.value = order
-        }
-        isOrdersModalOpen.value = true
-    }
-
-    function closeOrdersModal() {
-        isOrdersModalOpen.value = false
-        currentOrder.value = null
-    }
-
-    // Format price
-    function formatPrice(price) {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            minimumFractionDigits: 0
-        }).format(price)
-    }
-
-    // Format date
-    function formatDate(dateString) {
-        return new Date(dateString).toLocaleDateString('en-IN', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+                subtotal: subtotal.value,
+                shippingFee,
+                total,
+                isGuest: !token,
+            }),
         })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to place order')
+        }
+
+        // Clear cart on successful order
+        clearCart()
+
+        // Store order info
+        currentOrder.value = {
+            orderId: data.orderId,
+            orderNumber: data.orderNumber,
+            status: data.status,
+            total,
+        }
+
+        return data
+    } catch (e) {
+        console.error('Order placement failed:', e)
+        error.value = e.message
+        return null
+    } finally {
+        isLoading.value = false
+    }
+}
+
+/**
+ * Load user's orders
+ */
+async function loadOrders() {
+    const { getToken, isAuthenticated } = useAuth()
+
+    if (!isAuthenticated.value) {
+        orders.value = []
+        return
     }
 
-    // Computed
-    const pendingOrders = computed(() =>
-        orders.value.filter(o => o.status === 'PENDING_VERIFICATION')
-    )
+    isLoading.value = true
+    error.value = null
 
-    const activeOrders = computed(() =>
-        orders.value.filter(o =>
-            ['PAYMENT_VERIFIED', 'PROCESSING', 'SHIPPED'].includes(o.status)
-        )
-    )
+    try {
+        const response = await fetch(`${API_URL}/api/orders`, {
+            headers: {
+                'Authorization': `Bearer ${getToken()}`,
+            },
+        })
 
-    const completedOrders = computed(() =>
-        orders.value.filter(o => o.status === 'DELIVERED')
-    )
+        const data = await response.json()
 
+        if (response.ok) {
+            orders.value = data.orders || []
+        }
+    } catch (e) {
+        console.error('Load orders failed:', e)
+        error.value = e.message
+    } finally {
+        isLoading.value = false
+    }
+}
+
+/**
+ * Get single order by ID
+ */
+async function getOrder(orderId) {
+    const { getToken } = useAuth()
+
+    isLoading.value = true
+    error.value = null
+
+    try {
+        const response = await fetch(`${API_URL}/api/orders/${orderId}`, {
+            headers: {
+                'Authorization': `Bearer ${getToken()}`,
+            },
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Order not found')
+        }
+
+        return data.order
+    } catch (e) {
+        console.error('Get order failed:', e)
+        error.value = e.message
+        return null
+    } finally {
+        isLoading.value = false
+    }
+}
+
+/**
+ * Track order by order number (public)
+ */
+async function trackOrder(orderNumber) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+        const response = await fetch(`${API_URL}/api/orders/track/${orderNumber}`)
+        const data = await response.json()
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Order not found')
+        }
+
+        return data
+    } catch (e) {
+        console.error('Track order failed:', e)
+        error.value = e.message
+        return null
+    } finally {
+        isLoading.value = false
+    }
+}
+
+// ==================== UTILITY METHODS ====================
+
+/**
+ * Format price in INR
+ */
+function formatPrice(price) {
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+    }).format(price)
+}
+
+/**
+ * Format date
+ */
+function formatDate(timestamp) {
+    if (!timestamp) return ''
+    const date = new Date(timestamp)
+    return date.toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
+
+// ==================== EXPORT ====================
+
+export function useOrders() {
     return {
         // State
         orders,
         currentOrder,
         isLoading,
         error,
-        isOrdersModalOpen,
 
         // Computed
         pendingOrders,
-        activeOrders,
         completedOrders,
-
-        // Constants
-        ORDER_STATUSES,
+        activeOrders,
 
         // Methods
-        fetchOrders,
-        createOrder,
+        placeOrder,
+        loadOrders,
         getOrder,
+        trackOrder,
+
+        // Helpers
         getStatusInfo,
-        openOrdersModal,
-        closeOrdersModal,
         formatPrice,
-        formatDate
+        formatDate,
+        ORDER_STATUSES,
     }
 }

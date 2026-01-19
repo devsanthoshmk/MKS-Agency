@@ -26,3 +26,7 @@ dist-ssr
 # removing unwanted pnpm files [hope its unwanted]
 pnpm-lock.yaml
 # pnpm-workspace.yaml think its impo will search about it later
+
+# env
+.env
+
