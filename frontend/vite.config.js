@@ -26,3 +26,4 @@ export default defineConfig({
     }
   }
 })
+// testing cloudflare depoy
