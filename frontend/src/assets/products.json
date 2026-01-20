@@ -1,6 +1,6 @@
 {
-  "version": "2026-01-19",
-  "updatedAt": "2026-01-19T16:41:26.305Z",
+  "version": "2026-01-20",
+  "updatedAt": "2026-01-20T07:06:47.632Z",
   "categories": [
     "supplements",
     "digestive",
@@ -12,8 +12,8 @@
   "products": [
     {
       "id": "prod_001",
-      "slug": "ashwagandha-root-powder-edited",
-      "name": "Ashwagandha Root Powder-edited",
+      "slug": "ashwagandha-root-powder",
+      "name": "Ashwagandha Root Powder",
       "description": "Premium organic Ashwagandha (Withania somnifera) root powder, traditionally used for stress relief, energy boost, and overall vitality. Our ashwagandha is sourced from certified organic farms and processed using cold-grinding to preserve its natural potency.",
       "shortDescription": "Organic stress-relief adaptogen for energy & vitality",
       "price": 299,
