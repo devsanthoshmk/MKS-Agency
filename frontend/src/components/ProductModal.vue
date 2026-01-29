@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUI } from '../composables/useUI'
 import { useCart } from '../composables/useCart'
@@ -12,8 +12,24 @@ const { addItem: addToCart, isInCart } = useCart()
 const { toggleItem, isInWishlist } = useWishlist()
 const { getRelatedProducts } = useProducts()
 
+// Image gallery state
+const selectedImageIndex = ref(0)
+
 const isOpen = computed(() => activeModal.value === 'product' && modalData.value)
 const product = computed(() => modalData.value)
+
+// Get the currently selected image
+const currentImage = computed(() => {
+  if (product.value?.images?.length > 0) {
+    return product.value.images[selectedImageIndex.value] || product.value.images[0]
+  }
+  return null
+})
+
+// Reset image index when product changes
+watch(product, () => {
+  selectedImageIndex.value = 0
+})
 const related = computed(() => product.value ? getRelatedProducts(product.value, 4) : [])
 
 const discount = computed(() => {
@@ -91,14 +107,15 @@ function viewRelated(slug) {
             <!-- Image Section -->
             <div class="relative bg-surface-100">
               <!-- Main Image -->
-              <div class="aspect-square">
+              <div class="aspect-square overflow-hidden">
                 <img 
-                  v-if="product.images?.[0]"
-                  :src="product.images[0]"
+                  v-if="currentImage"
+                  :src="currentImage"
                   :alt="product.name"
-                  class="w-full h-full object-cover"
+                  class="w-full h-full object-cover transition-all duration-300"
+                  :key="selectedImageIndex"
                 />
-                <div v-else class="w-full h-full flex items-center justify-center bg-linear-to-br from-primary-100 to-primary-50">
+                <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-primary-50">
                   <svg class="w-24 h-24 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
@@ -124,12 +141,14 @@ function viewRelated(slug) {
               <!-- Thumbnail Gallery -->
               <div 
                 v-if="product.images?.length > 1"
-                class="absolute bottom-4 left-4 right-4 flex gap-2"
+                class="absolute bottom-4 left-4 right-4 flex gap-2 justify-center"
               >
                 <button 
                   v-for="(img, idx) in product.images.slice(0, 4)" 
                   :key="idx"
-                  class="w-16 h-16 rounded-lg overflow-hidden border-2 border-white shadow-lg"
+                  class="w-16 h-16 rounded-lg overflow-hidden border-2 shadow-lg transition-all duration-200 hover:scale-105"
+                  :class="selectedImageIndex === idx ? 'border-primary-500 ring-2 ring-primary-500 ring-offset-2' : 'border-white hover:border-primary-300'"
+                  @click="selectedImageIndex = idx"
                 >
                   <img :src="img" :alt="`${product.name} ${idx + 1}`" class="w-full h-full object-cover" />
                 </button>

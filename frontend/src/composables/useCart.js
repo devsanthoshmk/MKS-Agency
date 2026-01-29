@@ -72,10 +72,20 @@ async function syncCart() {
 
     isSyncing.value = true
     try {
-        // 1. Push local items to server (merge)
-        if (items.value.length > 0) {
-            console.log('Syncing local items to server...')
-            await Promise.all(items.value.map(item =>
+        // 1. First, fetch current cart from server
+        console.log('Fetching server cart...')
+        const data = await apiRequest('/api/cart')
+        const serverCart = data.cart || []
+
+        // 2. Get local items that are NOT already on the server
+        // These are items added while offline or before login
+        const serverProductIds = new Set(serverCart.map(item => item.product?.id || item.productId))
+        const localOnlyItems = items.value.filter(item => !serverProductIds.has(item.product.id))
+
+        // 3. Only push genuinely new local items to server
+        if (localOnlyItems.length > 0) {
+            console.log('Syncing new local items to server...', localOnlyItems.length)
+            await Promise.all(localOnlyItems.map(item =>
                 apiRequest('/api/cart/add', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -84,16 +94,20 @@ async function syncCart() {
                     })
                 })
             ))
+
+            // Re-fetch cart after adding new items
+            const updatedData = await apiRequest('/api/cart')
+            if (updatedData.cart) {
+                items.value = updatedData.cart
+            }
+        } else {
+            // No new local items, just use server cart
+            items.value = serverCart
         }
 
-        // 2. Fetch latest cart from server
-        console.log('Fetching server cart...')
-        const data = await apiRequest('/api/cart')
-
-        // 3. Update local state
-        if (data.cart) {
-            items.value = data.cart
-        }
+        // 4. Clear localStorage to prevent re-syncing the same items
+        // The server is now the source of truth
+        localStorage.removeItem(CART_STORAGE_KEY)
     } catch (e) {
         console.error('Cart sync failed:', e)
     } finally {

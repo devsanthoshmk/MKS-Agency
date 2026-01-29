@@ -143,11 +143,11 @@ watch(isAuthModalOpen, (open) => {
             <p class="text-red-700 text-sm">{{ error }}</p>
           </div>
           
-          <!-- Google Sign In Button -->
-          <div id="google-signin-button" class="flex justify-center mb-6" />
+          <!-- Google Sign In Button - Hidden for now, will be enabled in the future -->
+          <!-- <div id="google-signin-button" class="flex justify-center mb-6" /> -->
           
-          <!-- Fallback Button -->
-          <button 
+          <!-- Fallback Button - Hidden for now -->
+          <!-- <button 
             v-if="!googleLoaded"
             class="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border border-surface-300 rounded-xl hover:bg-surface-50 transition-colors"
             :disabled="isLoading"
@@ -161,17 +161,7 @@ watch(isAuthModalOpen, (open) => {
             <span class="font-medium text-surface-700">
               {{ isLoading ? 'Signing in...' : 'Continue with Google' }}
             </span>
-          </button>
-          
-          <!-- Divider -->
-          <div class="relative my-6">
-            <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-surface-200" />
-            </div>
-            <div class="relative flex justify-center text-sm">
-              <span class="px-4 bg-white text-surface-400">or sign in with email</span>
-            </div>
-          </div>
+          </button> -->
           
           <!-- Email Login Section -->
           <div class="bg-surface-50 rounded-xl p-4 text-left mb-6">
