@@ -392,7 +392,7 @@ const sortOptions = [
             <h4 class="font-semibold mb-4">Contact Us</h4>
             <ul class="space-y-2 text-surface-400">
               <li>📧 mks.agencies.official@gmail.com</li>
-              <li>📞 +91 9994969378</li>
+              <li>📞 +91 8610885886</li>
               <li>📍 Chennai, Tamil Nadu, India</li>
             </ul>
           </div>

@@ -315,3 +315,68 @@ Add to `wrangler.jsonc`:
 **Cart**: localStorage for guests, synced to Convex on login
 **Orders**: Always go through backend for validation
 **Admin**: All operations via authenticated backend routes
+
+---
+
+## File Storage
+
+Convex's built-in file storage is used for product images. The admin panel uploads images directly to Convex storage.
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Admin Panel Image Upload                       │
+│                                                                   │
+│  1. Generate Upload URL    2. POST File        3. Save URL       │
+│  ──────────────────────    ────────────        ────────────      │
+│  GET /api/storage/upload → Convex returns → Browser uploads →    │
+│                            short-lived URL    file directly       │
+│                                                     ↓            │
+│                                              storageId returned   │
+│                                                     ↓            │
+│                              Product image URL saved to JSON      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Storage Functions (convex/files.ts)
+
+```typescript
+// Generate a short-lived upload URL
+generateUploadUrl()
+
+// Get public URL for a storage ID
+getFileUrl({ storageId })
+
+// Get URLs for multiple storage IDs
+getFileUrls({ storageIds })
+
+// Delete a file from storage
+deleteFile({ storageId })
+```
+
+### Image URL Format
+
+Images are served from Convex's storage site:
+```
+https://{deployment}.convex.site/api/storage/{storageId}
+```
+
+Example:
+```
+https://woozy-otter-565.convex.site/api/storage/kg2d...xyz
+```
+
+### Environment Variables
+
+Required environment variables for file uploads:
+```bash
+VITE_CONVEX_URL=https://your-deployment.convex.cloud
+VITE_CONVEX_SITE_URL=https://your-deployment.convex.site
+```
+
+### Upload Limits
+
+- Maximum file size: 5MB
+- Supported formats: PNG, JPG, GIF, WebP
+- Images are stored permanently until explicitly deleted

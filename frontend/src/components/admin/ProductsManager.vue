@@ -1,8 +1,11 @@
 <script setup>
-import { ref, computed, defineProps, defineEmits } from 'vue'
+import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
+import { ConvexClient } from 'convex/browser'
 
 // API URL for production/development
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL || ''
+const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || CONVEX_URL.replace('.cloud', '.site')
 
 const props = defineProps({
   products: { type: Array, required: true },
@@ -18,6 +21,17 @@ const saveError = ref('')
 const saveSuccess = ref('')
 const searchQuery = ref('')
 const categoryFilter = ref('all')
+const isUploading = ref(false)
+const uploadProgress = ref(0)
+const isDragging = ref(false)
+
+// Initialize Convex client for file uploads
+let convexClient = null
+onMounted(() => {
+  if (CONVEX_URL) {
+    convexClient = new ConvexClient(CONVEX_URL)
+  }
+})
 
 const categories = computed(() => [...new Set(props.products.map(p => p.category).filter(Boolean))].sort())
 
@@ -47,7 +61,7 @@ function createNewProduct() {
 }
 
 function editProduct(product) {
-  editingProduct.value = { ...product }
+  editingProduct.value = { ...product, images: [...(product.images || [])] }
   isCreatingProduct.value = false
   saveError.value = ''
   saveSuccess.value = ''
@@ -92,8 +106,133 @@ async function deleteProduct(productId) {
   finally { isSaving.value = false }
 }
 
-function handleImageInput(event) {
-  if (event.target.value && editingProduct.value) editingProduct.value.images = event.target.value.split('\n').filter(Boolean)
+// Image upload functions
+async function uploadImage(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    saveError.value = 'Please select a valid image file'
+    return null
+  }
+
+  // Check file size (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    saveError.value = 'Image size must be less than 5MB'
+    return null
+  }
+
+  if (!convexClient) {
+    saveError.value = 'Convex not configured. Please check VITE_CONVEX_URL environment variable.'
+    return null
+  }
+
+  try {
+    // Step 1: Get a short-lived upload URL from Convex
+    const uploadUrl = await convexClient.mutation('files:generateUploadUrl', {})
+    
+    // Step 2: POST the file to the upload URL
+    const result = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    })
+    
+    if (!result.ok) {
+      throw new Error('Upload failed')
+    }
+    
+    const { storageId } = await result.json()
+    
+    // Step 3: Get the public URL for the uploaded file
+    // Convex provides a public URL pattern for storage files
+    const publicUrl = `${CONVEX_SITE_URL}/api/storage/${storageId}`
+    
+    return publicUrl
+  } catch (error) {
+    console.error('Upload error:', error)
+    saveError.value = 'Failed to upload image'
+    return null
+  }
+}
+
+async function handleFileUpload(event) {
+  const files = event.target.files
+  if (!files?.length || !editingProduct.value) return
+  
+  isUploading.value = true
+  uploadProgress.value = 0
+  saveError.value = ''
+  
+  const totalFiles = files.length
+  let uploadedCount = 0
+  
+  for (const file of files) {
+    const url = await uploadImage(file)
+    if (url) {
+      editingProduct.value.images = [...(editingProduct.value.images || []), url]
+    }
+    uploadedCount++
+    uploadProgress.value = Math.round((uploadedCount / totalFiles) * 100)
+  }
+  
+  isUploading.value = false
+  uploadProgress.value = 0
+  
+  // Clear file input
+  event.target.value = ''
+}
+
+function handleDragOver(event) {
+  event.preventDefault()
+  isDragging.value = true
+}
+
+function handleDragLeave(event) {
+  event.preventDefault()
+  isDragging.value = false
+}
+
+async function handleDrop(event) {
+  event.preventDefault()
+  isDragging.value = false
+  
+  const files = event.dataTransfer?.files
+  if (!files?.length || !editingProduct.value) return
+  
+  isUploading.value = true
+  uploadProgress.value = 0
+  saveError.value = ''
+  
+  const totalFiles = files.length
+  let uploadedCount = 0
+  
+  for (const file of files) {
+    if (file.type.startsWith('image/')) {
+      const url = await uploadImage(file)
+      if (url) {
+        editingProduct.value.images = [...(editingProduct.value.images || []), url]
+      }
+    }
+    uploadedCount++
+    uploadProgress.value = Math.round((uploadedCount / totalFiles) * 100)
+  }
+  
+  isUploading.value = false
+  uploadProgress.value = 0
+}
+
+function removeImage(index) {
+  if (!editingProduct.value) return
+  editingProduct.value.images = editingProduct.value.images.filter((_, i) => i !== index)
+}
+
+function moveImage(index, direction) {
+  if (!editingProduct.value || !editingProduct.value.images) return
+  const newIndex = index + direction
+  if (newIndex < 0 || newIndex >= editingProduct.value.images.length) return
+  
+  const images = [...editingProduct.value.images]
+  const [removed] = images.splice(index, 1)
+  images.splice(newIndex, 0, removed)
+  editingProduct.value.images = images
 }
 </script>
 
@@ -156,13 +295,115 @@ function handleImageInput(event) {
             <div><label class="text-sm font-medium text-surface-700">Category</label><input v-model="editingProduct.category" type="text" class="input mt-1" /></div>
             <div><label class="text-sm font-medium text-surface-700">Weight/Size</label><input v-model="editingProduct.weight" type="text" class="input mt-1" /></div>
           </div>
-          <div><label class="text-sm font-medium text-surface-700">Images (one URL per line)</label><textarea :value="editingProduct.images?.join('\n')" @input="handleImageInput" rows="2" class="input mt-1 resize-none font-mono text-sm" /></div>
+          
+          <!-- Image Upload Section -->
+          <div>
+            <label class="text-sm font-medium text-surface-700 block mb-2">Product Images</label>
+            
+            <!-- Drag & Drop Upload Area -->
+            <div 
+              class="relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200"
+              :class="[
+                isDragging ? 'border-primary-500 bg-primary-50' : 'border-surface-300 hover:border-surface-400',
+                isUploading ? 'opacity-50 pointer-events-none' : ''
+              ]"
+              @dragover="handleDragOver"
+              @dragleave="handleDragLeave"
+              @drop="handleDrop"
+            >
+              <input 
+                type="file" 
+                accept="image/*" 
+                multiple 
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                @change="handleFileUpload"
+                :disabled="isUploading"
+              />
+              
+              <div v-if="isUploading" class="flex flex-col items-center">
+                <svg class="w-8 h-8 text-primary-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2 text-sm text-surface-600">Uploading... {{ uploadProgress }}%</p>
+              </div>
+              
+              <div v-else class="flex flex-col items-center">
+                <svg class="w-10 h-10 text-surface-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p class="text-sm text-surface-600">
+                  <span class="text-primary-600 font-medium">Click to upload</span> or drag and drop
+                </p>
+                <p class="text-xs text-surface-400 mt-1">PNG, JPG, GIF up to 5MB</p>
+              </div>
+            </div>
+            
+            <!-- Image Previews -->
+            <div v-if="editingProduct.images?.length" class="mt-4 grid grid-cols-4 gap-3">
+              <div 
+                v-for="(image, index) in editingProduct.images" 
+                :key="index" 
+                class="relative group aspect-square rounded-lg overflow-hidden bg-surface-100"
+              >
+                <img :src="image" :alt="`Product image ${index + 1}`" class="w-full h-full object-cover" />
+                
+                <!-- Image badges & controls -->
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                  <!-- Move left -->
+                  <button 
+                    v-if="index > 0"
+                    @click.stop="moveImage(index, -1)" 
+                    class="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors"
+                    title="Move left"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  
+                  <!-- Move right -->
+                  <button 
+                    v-if="index < editingProduct.images.length - 1"
+                    @click.stop="moveImage(index, 1)" 
+                    class="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors"
+                    title="Move right"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  
+                  <!-- Delete -->
+                  <button 
+                    @click.stop="removeImage(index)" 
+                    class="p-1.5 bg-red-500/90 text-white rounded-lg hover:bg-red-500 transition-colors"
+                    title="Remove image"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Primary badge -->
+                <span v-if="index === 0" class="absolute top-1 left-1 px-1.5 py-0.5 bg-primary-500 text-white text-[10px] font-medium rounded">
+                  Primary
+                </span>
+              </div>
+            </div>
+            
+            <p v-if="editingProduct.images?.length" class="text-xs text-surface-400 mt-2">
+              Drag images to reorder. First image will be the primary product image.
+            </p>
+          </div>
+          
           <div><label class="text-sm font-medium text-surface-700">Usage</label><textarea v-model="editingProduct.usage" rows="2" class="input mt-1 resize-none" /></div>
           <div><label class="text-sm font-medium text-surface-700">Ingredients</label><input v-model="editingProduct.ingredients" type="text" class="input mt-1" /></div>
           <div class="flex items-center gap-2"><input v-model="editingProduct.isActive" type="checkbox" id="isActive" class="w-4 h-4" /><label for="isActive" class="text-sm">Active</label></div>
         </div>
         <div class="flex gap-3">
-          <button class="flex-1 btn btn-primary" :disabled="isSaving" @click="saveProduct">{{ isSaving ? 'Saving...' : 'Save' }}</button>
+          <button class="flex-1 btn btn-primary" :disabled="isSaving || isUploading" @click="saveProduct">{{ isSaving ? 'Saving...' : 'Save' }}</button>
           <button class="btn btn-secondary" @click="cancelEdit">Cancel</button>
         </div>
       </div>
