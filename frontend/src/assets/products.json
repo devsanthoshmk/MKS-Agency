@@ -1,13 +1,12 @@
 {
   "version": "2026-02-07",
-  "updatedAt": "2026-02-07T18:09:58.841Z",
+  "updatedAt": "2026-02-07T18:10:03.146Z",
   "categories": [
     "supplements",
     "digestive",
     "oils",
     "immunity",
-    "skin-care",
-    "hair-care"
+    "skin-care"
   ],
   "products": [
     {
@@ -220,38 +219,38 @@
       "metaDescription": "Authentic Chyawanprash with 40+ herbs for complete immunity support. Perfect for the whole family."
     },
     {
-      "id": "prod_007",
-      "slug": "bhringraj-hair-oil",
-      "name": "Bhringraj Hair Oil",
-      "description": "Premium Bhringraj (Eclipta alba) hair oil for thick, healthy, and lustrous hair. Infused with sesame oil and other Siddha & Ayurveda herbs, this oil strengthens hair from root to tip and prevents premature greying.",
-      "shortDescription": "Siddha & Ayurveda oil for thick, healthy hair",
-      "price": 279,
-      "comparePrice": 379,
-      "category": "hair-care",
-      "subcategory": "oils",
+      "id": "prod_008",
+      "slug": "shatavari-womens-wellness",
+      "name": "Shatavari Women's Wellness",
+      "description": "Pure Shatavari (Asparagus racemosus) capsules specifically formulated for women's health. This revered Siddha & Ayurveda herb supports hormonal balance, reproductive health, and overall vitality for women of all ages.",
+      "shortDescription": "Herbal support for women's hormonal balance",
+      "price": 329,
+      "comparePrice": 429,
+      "category": "supplements",
+      "subcategory": "capsules",
       "images": [
-        "https://images.unsplash.com/photo-1526947425960-945c6e72858f?w=600&h=600&fit=crop",
-        "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=600&h=600&fit=crop"
+        "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=600&h=600&fit=crop",
+        "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=600&h=600&fit=crop"
       ],
-      "stock": 110,
+      "stock": 140,
       "isActive": true,
       "tags": [
-        "hair-oil",
-        "bhringraj",
-        "hair-growth",
-        "anti-greying"
+        "womens-health",
+        "hormonal-balance",
+        "organic",
+        "vitality"
       ],
       "benefits": [
-        "Promotes hair growth",
-        "Prevents premature greying",
-        "Strengthens hair follicles",
-        "Reduces hair fall"
+        "Supports hormonal balance",
+        "Promotes reproductive health",
+        "Enhances energy and vitality",
+        "Natural stress relief"
       ],
-      "ingredients": "Bhringraj, Sesame Oil, Amla, Brahmi",
-      "usage": "Warm and apply to scalp and hair. Massage for 10 minutes. Leave overnight for best results.",
-      "weight": "200ml",
-      "metaTitle": "Bhringraj Hair Oil - Siddha & Ayurveda Hair Growth Oil",
-      "metaDescription": "Premium Bhringraj oil for thick, healthy hair and prevention of premature greying."
+      "ingredients": "100% Pure Shatavari Root Extract (Vegetarian Capsule)",
+      "usage": "Take 1-2 capsules twice daily with water or milk.",
+      "weight": "60 Capsules",
+      "metaTitle": "Shatavari Capsules - Women's Wellness & Hormonal Balance",
+      "metaDescription": "Pure Shatavari for women's hormonal balance, reproductive health, and overall vitality."
     }
   ]
 }
