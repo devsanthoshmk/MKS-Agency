@@ -1,51 +1,15 @@
 {
   "version": "2026-02-07",
-  "updatedAt": "2026-02-07T18:08:31.786Z",
+  "updatedAt": "2026-02-07T18:09:43.776Z",
   "categories": [
-    "supplements",
     "digestive",
     "oils",
     "immunity",
     "skin-care",
-    "hair-care"
+    "hair-care",
+    "supplements"
   ],
   "products": [
-    {
-      "id": "prod_001",
-      "slug": "ashwagandha-root-powder",
-      "name": "Ashwagandha Root Powder",
-      "description": "Premium organic Ashwagandha (Withania somnifera) root powder, traditionally used for stress relief, energy boost, and overall vitality. Our ashwagandha is sourced from certified organic farms and processed using cold-grinding to preserve its natural potency.",
-      "shortDescription": "Organic stress-relief adaptogen for energy & vitality",
-      "price": 299,
-      "comparePrice": 399,
-      "category": "supplements",
-      "subcategory": "powders",
-      "images": [
-        "https://woozy-otter-565.convex.site/api/storage/kg248qyaab8sr2ewvzabmw221580pd7q",
-        "https://images.unsplash.com/photo-1611241893603-3c359704e0ee?w=600&h=600&fit=crop",
-        "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&h=600&fit=crop"
-      ],
-      "stock": 150,
-      "isActive": true,
-      "tags": [
-        "organic",
-        "stress-relief",
-        "energy",
-        "adaptogen",
-        "bestseller"
-      ],
-      "benefits": [
-        "Reduces stress and anxiety",
-        "Boosts energy and stamina",
-        "Supports immune system",
-        "Enhances mental clarity"
-      ],
-      "ingredients": "100% Pure Organic Ashwagandha Root Powder",
-      "usage": "Mix 1/2 teaspoon with warm milk or water. Take twice daily.",
-      "weight": "100g",
-      "metaTitle": "Organic Ashwagandha Powder - Stress Relief & Energy",
-      "metaDescription": "Premium organic Ashwagandha root powder for stress relief, energy boost, and overall vitality. 100% natural and lab-tested."
-    },
     {
       "id": "prod_002",
       "slug": "triphala-digestive-capsules",
