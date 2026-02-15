@@ -5,7 +5,7 @@
 The backend is a **Cloudflare Worker** that handles:
 - 🔐 Authentication (Google OAuth, email, guest)
 - 📦 Order management with Convex database
-- 👑 Admin operations (order status, products via GitHub)
+- 👑 Admin operations (order status, products via Convex)
 - ⏱️ Rate limiting via KV
 - 📧 Transactional emails via Netlify Functions
 
@@ -14,15 +14,12 @@ The backend is a **Cloudflare Worker** that handles:
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
 │   Vue Frontend  │────▶│ Cloudflare Worker │────▶│     Convex      │
-│  (localhost:5173)│     │ (localhost:8787)  │     │   (Database)    │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-                                │
-                                ▼
-                        ┌──────────────┐
-                        │  GitHub API  │
-                        │ (Products)   │
-                        └──────────────┘
+│  (localhost:5173)│     │ (localhost:8787)  │     │ (Database +     │
+└─────────────────┘     └──────────────────┘     │  Products)      │
+                                                  └─────────────────┘
 ```
+
+> **Note:** Products are now managed entirely via Convex. The previous GitHub API integration for products has been removed.
 
 ## Setup
 
@@ -42,7 +39,6 @@ Edit `wrangler.jsonc`:
   "vars": {
     "FRONTEND_URL": "http://localhost:5173",
     "CONVEX_URL": "https://your-deployment.convex.cloud",
-    "GITHUB_REPO": "your-username/MKS-Agency",
     "ADMIN_PASSCODE": "your-secure-passcode"
   },
   "kv_namespaces": [
@@ -62,11 +58,9 @@ wrangler secret put JWT_SECRET
 # Convex admin key (from Convex dashboard > Settings > Deploy Key)
 wrangler secret put CONVEX_ADMIN_KEY
 # Enter: your-convex-admin-key
-
-# GitHub PAT for products.json updates
-wrangler secret put GITHUB_TOKEN
-# Enter: ghp_xxxx...
 ```
+
+> **Note:** `GITHUB_TOKEN` is no longer required. Products are managed via Convex, not GitHub commits.
 
 ### 4. Create KV Namespaces
 
@@ -122,7 +116,7 @@ Backend runs at: `http://localhost:8787`
 | GET | `/api/admin/orders` | Get all orders |
 | PUT | `/api/admin/orders/:id/status` | Update order status |
 | GET | `/api/admin/analytics` | Get order analytics |
-| PUT | `/api/admin/products` | Update products (GitHub) |
+| PUT | `/api/admin/products` | Manage products (Convex) |
 
 ### Cart Sync
 

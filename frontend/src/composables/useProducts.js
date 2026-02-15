@@ -1,20 +1,28 @@
 /**
  * Products Composable
  * Handles product data loading, caching, filtering, and search
+ * 
+ * DATA SOURCE: Convex database (via ConvexHttpClient)
+ * Replaces the previous static JSON import approach.
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '../../convex/_generated/api.js'
 
-// Cache keys
-const CACHE_KEY = 'mks_products_cache'
-const CACHE_VERSION_KEY = 'mks_products_version'
+// Convex client singleton
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL || ''
+let convexClient = null
 
-// In-memory cache
-let memoryCache = null
-let memoryCacheVersion = null
+function getConvexClient() {
+    if (!convexClient && CONVEX_URL) {
+        convexClient = new ConvexHttpClient(CONVEX_URL)
+    }
+    return convexClient
+}
 
-// Product data
+// Product data (shared state across components)
 const products = ref([])
 const categories = ref([])
 const isLoading = ref(false)
@@ -35,103 +43,46 @@ export function useProducts() {
     const route = useRoute()
     const router = useRouter()
 
-    // Load products from JSON
+    /**
+     * Load products from Convex database
+     * @param {boolean} forceRefresh - If true, bypasses in-memory cache
+     */
     async function loadProducts(forceRefresh = false) {
-        // Return from memory cache if available
-        if (memoryCache && !forceRefresh) {
-            products.value = memoryCache.products
-            categories.value = memoryCache.categories
-            dataVersion.value = memoryCacheVersion
+        // Return from memory cache if available and not forcing refresh
+        if (products.value.length > 0 && !forceRefresh) {
             return
         }
 
-        // Try localStorage cache
-        if (!forceRefresh) {
-            try {
-                const cached = localStorage.getItem(CACHE_KEY)
-                const cachedVersion = localStorage.getItem(CACHE_VERSION_KEY)
-
-                if (cached && cachedVersion) {
-                    const data = JSON.parse(cached)
-                    products.value = data.products
-                    categories.value = data.categories
-                    dataVersion.value = cachedVersion
-
-                    // Update memory cache
-                    memoryCache = data
-                    memoryCacheVersion = cachedVersion
-
-                    // Fetch in background to check for updates
-                    fetchProductsInBackground()
-                    return
-                }
-            } catch (e) {
-                console.warn('Cache read failed:', e)
-            }
-        }
-
-        // Fetch fresh data
         await fetchProducts()
     }
 
+    /**
+     * Fetch products from Convex
+     */
     async function fetchProducts() {
         isLoading.value = true
         error.value = null
 
         try {
-            // Dynamic import of products.json
-            const data = await import('@/assets/products.json')
-
-            products.value = data.products || []
-            categories.value = data.categories || []
-            dataVersion.value = data.version || Date.now().toString()
-
-            // Update caches
-            const cacheData = {
-                products: data.products,
-                categories: data.categories
+            const client = getConvexClient()
+            if (!client) {
+                throw new Error('Convex client not configured. Check VITE_CONVEX_URL.')
             }
 
-            memoryCache = cacheData
-            memoryCacheVersion = data.version
+            // Fetch products and categories from Convex
+            const [fetchedProducts, fetchedCategories] = await Promise.all([
+                client.query(api.queries.getAllProducts, {}),
+                client.query(api.queries.getProductCategories, {}),
+            ])
 
-            try {
-                localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
-                localStorage.setItem(CACHE_VERSION_KEY, data.version)
-            } catch (e) {
-                console.warn('Cache write failed:', e)
-            }
+            products.value = fetchedProducts || []
+            categories.value = fetchedCategories || []
+            dataVersion.value = Date.now().toString()
         } catch (e) {
             error.value = 'Failed to load products'
             console.error('Product load error:', e)
         } finally {
             isLoading.value = false
-        }
-    }
-
-    async function fetchProductsInBackground() {
-        try {
-            const data = await import('@/assets/products.json')
-
-            // Check if version changed
-            if (data.version !== dataVersion.value) {
-                products.value = data.products || []
-                categories.value = data.categories || []
-                dataVersion.value = data.version
-
-                const cacheData = {
-                    products: data.products,
-                    categories: data.categories
-                }
-
-                memoryCache = cacheData
-                memoryCacheVersion = data.version
-
-                localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
-                localStorage.setItem(CACHE_VERSION_KEY, data.version)
-            }
-        } catch (e) {
-            console.warn('Background fetch failed:', e)
         }
     }
 
@@ -198,7 +149,8 @@ export function useProducts() {
     const filteredProducts = computed(() => {
         let result = [...products.value]
 
-        // Filter by active status
+        // Filter by active status (products from Convex are already active-only,
+        // but keep this for safety and backwards compatibility)
         result = result.filter(p => p.isActive !== false)
 
         // Filter by category
@@ -244,8 +196,7 @@ export function useProducts() {
                 result.sort((a, b) => b.price - a.price)
                 break
             case 'newest':
-                // Assuming products are in order of creation, newest first
-                result.reverse()
+                result.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
                 break
             default:
                 // Default: bestsellers first

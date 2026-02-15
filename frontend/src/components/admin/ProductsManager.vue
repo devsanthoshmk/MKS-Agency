@@ -1,11 +1,11 @@
 <script setup>
 import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
 import { ConvexClient } from 'convex/browser'
+import { api } from '../../../convex/_generated/api.js'
 
 // API URL for production/development
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL || ''
-const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL || CONVEX_URL.replace('.cloud', '.site')
 
 const props = defineProps({
   products: { type: Array, required: true },
@@ -25,13 +25,14 @@ const isUploading = ref(false)
 const uploadProgress = ref(0)
 const isDragging = ref(false)
 
-// Initialize Convex client for file uploads
+// Initialize Convex client for file uploads AND product mutations
 let convexClient = null
 onMounted(() => {
   if (CONVEX_URL) {
     convexClient = new ConvexClient(CONVEX_URL)
   }
 })
+
 
 const categories = computed(() => [...new Set(props.products.map(p => p.category).filter(Boolean))].sort())
 
@@ -79,32 +80,102 @@ async function saveProduct() {
   saveSuccess.value = ''
 
   try {
-    const updatedProducts = isCreatingProduct.value ? [...props.products, editingProduct.value] : props.products.map(p => p.id === editingProduct.value.id ? editingProduct.value : p)
-    const response = await fetch(`${API_URL}/api/admin/products`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${props.adminToken}` }, body: JSON.stringify({ products: updatedProducts }) })
-    if (response.ok) {
-      saveSuccess.value = 'Product saved!'
-      emit('refresh')
-      setTimeout(() => { editingProduct.value = null; isCreatingProduct.value = false }, 1000)
-    } else {
-      const data = await response.json()
-      saveError.value = data.error || 'Failed to save'
+    if (!convexClient) {
+      saveError.value = 'Convex not configured. Check VITE_CONVEX_URL.'
+      return
     }
+
+    const product = editingProduct.value
+
+    if (isCreatingProduct.value) {
+      // Create new product via Convex mutation
+      await convexClient.mutation(api.mutations.createProduct, {
+        productId: product.id || 'prod_' + Date.now(),
+        slug: product.slug,
+        name: product.name,
+        description: product.description || undefined,
+        shortDescription: product.shortDescription || undefined,
+        price: Number(product.price),
+        comparePrice: product.comparePrice ? Number(product.comparePrice) : undefined,
+        category: product.category || undefined,
+        subcategory: product.subcategory || undefined,
+        images: product.images || undefined,
+        stock: Number(product.stock) || 0,
+        isActive: product.isActive !== false,
+        tags: product.tags?.length ? product.tags : undefined,
+        benefits: product.benefits?.length ? product.benefits : undefined,
+        ingredients: product.ingredients || undefined,
+        usage: product.usage || undefined,
+        weight: product.weight || undefined,
+        metaTitle: product.metaTitle || undefined,
+        metaDescription: product.metaDescription || undefined,
+      })
+    } else {
+      // Update existing product via Convex mutation
+      await convexClient.mutation(api.mutations.updateProduct, {
+        _id: product._id,
+        productId: product.id || product.productId,
+        slug: product.slug,
+        name: product.name,
+        description: product.description || undefined,
+        shortDescription: product.shortDescription || undefined,
+        price: Number(product.price),
+        comparePrice: product.comparePrice ? Number(product.comparePrice) : undefined,
+        category: product.category || undefined,
+        subcategory: product.subcategory || undefined,
+        images: product.images || undefined,
+        stock: Number(product.stock) || 0,
+        isActive: product.isActive !== false,
+        tags: product.tags?.length ? product.tags : undefined,
+        benefits: product.benefits?.length ? product.benefits : undefined,
+        ingredients: product.ingredients || undefined,
+        usage: product.usage || undefined,
+        weight: product.weight || undefined,
+        metaTitle: product.metaTitle || undefined,
+        metaDescription: product.metaDescription || undefined,
+      })
+    }
+
+    saveSuccess.value = 'Product saved!'
+    emit('refresh')
+    setTimeout(() => { editingProduct.value = null; isCreatingProduct.value = false }, 1000)
   } catch (e) {
-    saveError.value = 'Network error'
+    console.error('Save product error:', e)
+    saveError.value = e.message || 'Failed to save product'
   } finally {
     isSaving.value = false
   }
 }
 
+
 async function deleteProduct(productId) {
   if (!confirm('Delete this product?')) return
   isSaving.value = true
   try {
-    const response = await fetch(`${API_URL}/api/admin/products`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${props.adminToken}` }, body: JSON.stringify({ products: props.products.filter(p => p.id !== productId) }) })
-    if (response.ok) emit('refresh')
-  } catch (e) { console.error(e) }
-  finally { isSaving.value = false }
+    if (!convexClient) {
+      saveError.value = 'Convex not configured.'
+      return
+    }
+
+    // Find the product to get its Convex _id
+    const product = props.products.find(p => p.id === productId || p.productId === productId)
+    if (!product || !product._id) {
+      saveError.value = 'Product not found in database'
+      return
+    }
+
+    await convexClient.mutation(api.mutations.deleteProduct, {
+      _id: product._id,
+    })
+    emit('refresh')
+  } catch (e) {
+    console.error('Delete product error:', e)
+    saveError.value = e.message || 'Failed to delete product'
+  } finally {
+    isSaving.value = false
+  }
 }
+
 
 // Image upload functions
 async function uploadImage(file) {
@@ -126,7 +197,7 @@ async function uploadImage(file) {
 
   try {
     // Step 1: Get a short-lived upload URL from Convex
-    const uploadUrl = await convexClient.mutation('files:generateUploadUrl', {})
+    const uploadUrl = await convexClient.mutation(api.files.generateUploadUrl, {})
     
     // Step 2: POST the file to the upload URL
     const result = await fetch(uploadUrl, {
@@ -136,14 +207,18 @@ async function uploadImage(file) {
     })
     
     if (!result.ok) {
-      throw new Error('Upload failed')
+      throw new Error(`Upload failed with status ${result.status}`)
     }
     
     const { storageId } = await result.json()
     
-    // Step 3: Get the public URL for the uploaded file
-    // Convex provides a public URL pattern for storage files
-    const publicUrl = `${CONVEX_SITE_URL}/api/storage/${storageId}`
+    // Step 3: Get the public URL via Convex's storage.getUrl()
+    // This returns the correct CDN-backed URL for the uploaded file
+    const publicUrl = await convexClient.query(api.files.getFileUrl, { storageId })
+    
+    if (!publicUrl) {
+      throw new Error('Failed to get public URL for uploaded file')
+    }
     
     return publicUrl
   } catch (error) {

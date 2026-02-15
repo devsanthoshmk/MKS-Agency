@@ -3,9 +3,9 @@
 ## Overview
 
 The database uses **Convex** with real-time sync. Data is accessible:
-- **Publicly**: Product catalog (from `products.json`)
+- **Publicly**: Product catalog (from `products` table)
 - **Authenticated**: User's own orders, cart, wishlist
-- **Admin**: All orders and analytics
+- **Admin**: All orders, all products (including inactive), and analytics
 
 ## Schema
 
@@ -13,25 +13,31 @@ The database uses **Convex** with real-time sync. Data is accessible:
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌──────────────────────┐
-│     users       │     │     orders      │     │     orderItems       │
+│    products     │     │     orders      │     │     orderItems       │
 ├─────────────────┤     ├─────────────────┤     ├──────────────────────┤
-│ _id             │◀────│ userId          │◀────│ orderId              │
-│ email           │     │ orderNumber     │     │ productId            │
-│ name            │     │ status          │     │ productName          │
-│ phone           │     │ total           │     │ quantity             │
-│ provider        │     │ shipping...     │     │ subtotal             │
-│ isGuest         │     │ tracking...     │     └──────────────────────┘
-└─────────────────┘     └─────────────────┘
-        │                       │
-        │                       ▼
-        │               ┌──────────────────────┐
-        │               │ orderStatusHistory   │
-        │               ├──────────────────────┤
-        │               │ orderId              │
-        │               │ status               │
-        │               │ note                 │
-        │               │ changedBy            │
-        │               └──────────────────────┘
+│ _id             │     │ _id             │     │ orderId              │
+│ productId       │     │ userId          │◀────│ productId            │
+│ slug            │     │ orderNumber     │     │ productName          │
+│ name            │     │ status          │     │ quantity             │
+│ price           │     │ total           │     │ subtotal             │
+│ category        │     │ shipping...     │     └──────────────────────┘
+│ stock           │     │ tracking...     │
+│ isActive        │     └─────────────────┘
+│ images[]        │             │
+│ tags[]          │             ▼
+│ ...             │     ┌──────────────────────┐
+└─────────────────┘     │ orderStatusHistory   │
+                        ├──────────────────────┤
+┌─────────────────┐     │ orderId              │
+│     users       │     │ status               │
+├─────────────────┤     │ note                 │
+│ _id             │     │ changedBy            │
+│ email           │     └──────────────────────┘
+│ name            │
+│ phone           │
+│ provider        │
+│ isGuest         │
+└─────────────────┘
         │
         ▼
 ┌─────────────────┐     ┌─────────────────┐
@@ -43,6 +49,41 @@ The database uses **Convex** with real-time sync. Data is accessible:
 └─────────────────┘     │ quantity        │
                         └─────────────────┘
 ```
+
+### products
+
+Stores the full product catalog. Replaces the previous static `products.json` file.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `_id` | Id | Convex document ID |
+| `productId` | string | Legacy ID (e.g. `prod_001`) for backward compatibility |
+| `slug` | string | URL-friendly identifier |
+| `name` | string | Product name |
+| `description` | string? | Full description |
+| `shortDescription` | string? | Brief description |
+| `price` | number | Selling price (INR) |
+| `comparePrice` | number? | Original/compare price (for showing discounts) |
+| `category` | string? | Product category |
+| `subcategory` | string? | Product subcategory |
+| `images` | string[]? | Array of image URLs (Convex storage) |
+| `stock` | number | Available stock quantity |
+| `isActive` | boolean | Whether product is visible on storefront |
+| `tags` | string[]? | Tags for filtering/search (e.g. `bestseller`) |
+| `benefits` | string[]? | Product benefits list |
+| `ingredients` | string? | Ingredients information |
+| `usage` | string? | Usage instructions |
+| `weight` | string? | Product weight |
+| `metaTitle` | string? | SEO title |
+| `metaDescription` | string? | SEO description |
+| `createdAt` | number | Timestamp |
+| `updatedAt` | number | Last modified timestamp |
+
+**Indexes:**
+- `by_slug` — Find by URL slug
+- `by_category` — Filter by category
+- `by_active` — Filter active/inactive products
+- `by_product_id` — Find by legacy product ID
 
 ### users
 
@@ -145,7 +186,24 @@ Stores both registered and guest users.
 
 ## Queries
 
-### Public Queries
+### Product Queries
+
+```typescript
+// Get all active products for public storefront
+getAllProducts()
+// Returns products with isActive === true, mapped with `id` field for compatibility
+
+// Get a single product by slug
+getProductBySlug({ slug })
+
+// Get all distinct categories from active products
+getProductCategories()
+
+// Get all products for admin (including inactive)
+getAllProductsAdmin()
+```
+
+### Order Queries
 
 ```typescript
 // Get order analytics (admin uses via backend)
@@ -180,6 +238,32 @@ getCart({ userId })
 ---
 
 ## Mutations
+
+### Product Mutations
+
+```typescript
+// Create a new product
+createProduct({
+  productId, slug, name, price, stock, isActive,
+  description?, shortDescription?, comparePrice?,
+  category?, subcategory?, images?, tags?, benefits?,
+  ingredients?, usage?, weight?, metaTitle?, metaDescription?
+})
+
+// Update an existing product (by Convex _id)
+updateProduct({
+  _id,          // Required: Convex document ID
+  slug?, name?, price?, stock?, isActive?,
+  ...           // All other fields are optional
+})
+
+// Delete a product
+deleteProduct({ _id })
+
+// Seed products from JSON data (idempotent migration utility)
+seedProducts({ products: [{ id, slug, name, price, stock, isActive, ... }] })
+// Skips products that already exist by productId
+```
 
 ### User Mutations
 
@@ -289,12 +373,12 @@ Add to `wrangler.jsonc`:
 │                         Frontend                              │
 │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐      │
 │  │  Products    │   │   Cart       │   │   Orders     │      │
-│  │ (JSON file)  │   │ (Convex*)    │   │  (Backend)   │      │
+│  │  (Convex)    │   │ (Convex*)    │   │  (Backend)   │      │
 │  └──────────────┘   └──────────────┘   └──────────────┘      │
 │         │                  │                  │               │
 │         ▼                  ▼                  ▼               │
-│   Static import     localStorage +      API calls via        │
-│                     Convex sync        Backend Worker         │
+│  ConvexHttpClient    localStorage +      API calls via       │
+│   (queries.ts)       Convex sync        Backend Worker       │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -311,10 +395,11 @@ Add to `wrangler.jsonc`:
 * Cart syncs to Convex on user login
 ```
 
-**Products**: Served from static JSON file for fast loading
+**Products**: Fetched from Convex `products` table via `ConvexHttpClient` in `useProducts.js`
 **Cart**: localStorage for guests, synced to Convex on login
 **Orders**: Always go through backend for validation
-**Admin**: All operations via authenticated backend routes
+**Admin Products**: CRUD via Convex mutations directly from `ProductsManager.vue`
+**Admin Orders**: All operations via authenticated backend routes
 
 ---
 
@@ -325,58 +410,89 @@ Convex's built-in file storage is used for product images. The admin panel uploa
 ### How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Admin Panel Image Upload                       │
-│                                                                   │
-│  1. Generate Upload URL    2. POST File        3. Save URL       │
-│  ──────────────────────    ────────────        ────────────      │
-│  GET /api/storage/upload → Convex returns → Browser uploads →    │
-│                            short-lived URL    file directly       │
-│                                                     ↓            │
-│                                              storageId returned   │
-│                                                     ↓            │
-│                              Product image URL saved to JSON      │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Admin Panel Image Upload Workflow                      │
+│                                                                           │
+│  1. Generate Upload URL     2. POST File         3. Get Public URL       │
+│  ────────────────────────   ────────────────     ──────────────────      │
+│  mutation(generateUploadUrl) → Returns temp URL → Browser uploads file   │
+│                                                         ↓                │
+│                                                   storageId returned      │
+│                                                         ↓                │
+│                                    query(getFileUrl, { storageId })      │
+│                                                         ↓                │
+│                              Returns CDN-backed public URL via           │
+│                               ctx.storage.getUrl(storageId)              │
+│                                                         ↓                │
+│                           Public URL saved to products.images[]          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Storage Functions (convex/files.ts)
 
 ```typescript
-// Generate a short-lived upload URL
+// Generate a short-lived upload URL (mutation)
 generateUploadUrl()
+// Returns a temporary URL where the client can POST the file
 
-// Get public URL for a storage ID
+// Get public URL for a storage ID (query)
 getFileUrl({ storageId })
+// Returns the actual CDN URL via ctx.storage.getUrl()
 
-// Get URLs for multiple storage IDs
+// Get URLs for multiple storage IDs (query)
 getFileUrls({ storageIds })
 
-// Delete a file from storage
+// Delete a file from storage (mutation)
 deleteFile({ storageId })
+```
+
+### Image Upload Implementation (ProductsManager.vue)
+
+**CORRECT** implementation:
+```javascript
+// Step 1: Get upload URL
+const uploadUrl = await convexClient.mutation(api.files.generateUploadUrl, {})
+
+// Step 2: Upload file to Convex
+const result = await fetch(uploadUrl, {
+  method: 'POST',
+  headers: { 'Content-Type': file.type },
+  body: file,
+})
+const { storageId } = await result.json()
+
+// Step 3: Get the public URL via ctx.storage.getUrl()
+const publicUrl = await convexClient.query(api.files.getFileUrl, { storageId })
+
+// Step 4: Save publicUrl to product.images[] array
+```
+
+**❌ INCORRECT** (this was the bug):
+```javascript
+// DO NOT manually construct URLs like this:
+const publicUrl = `${CONVEX_SITE_URL}/api/storage/${storageId}` // ❌ Returns 404!
 ```
 
 ### Image URL Format
 
-Images are served from Convex's storage site:
-```
-https://{deployment}.convex.site/api/storage/{storageId}
-```
+Images are served from Convex's CDN with URLs generated by `ctx.storage.getUrl(storageId)`. The exact format is managed by Convex and may change. Always use `getFileUrl()` query to get the correct URL.
 
-Example:
+Example URL (format may vary):
 ```
-https://woozy-otter-565.convex.site/api/storage/kg2d...xyz
+https://xxxxx.convex.cloud/api/storage/...
 ```
 
 ### Environment Variables
 
-Required environment variables for file uploads:
+Required environment variable for Convex connection:
 ```bash
 VITE_CONVEX_URL=https://your-deployment.convex.cloud
-VITE_CONVEX_SITE_URL=https://your-deployment.convex.site
 ```
+
+**Note**: `VITE_CONVEX_SITE_URL` is **NOT** required for file storage. Public URLs are retrieved via `getFileUrl()` query.
 
 ### Upload Limits
 
-- Maximum file size: 5MB
+- Maximum file size: 5MB (enforced in ProductsManager.vue)
 - Supported formats: PNG, JPG, GIF, WebP
-- Images are stored permanently until explicitly deleted
+- Images are stored permanently until explicitly deleted via `deleteFile()` mutation

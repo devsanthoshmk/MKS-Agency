@@ -692,12 +692,17 @@ router.post('/api/auth/guest', async (request, env, ctx, params, convex) => {
 			86400 // 24 hours
 		)
 
+
 		// Send verification email
-		await sendEmail(env, 'guest-verification', {
+		const sent = await sendEmail(env, 'guest-verification', {
 			to: email,
 			name,
 			verificationLink: `${env.FRONTEND_URL}/verify/${verificationToken}`
 		})
+
+		if (!sent) {
+			return error('Failed to send verification email', 500)
+		}
 
 		return json({
 			user: {
@@ -790,10 +795,14 @@ router.post('/api/auth/email/send', async (request, env, ctx, params, convex) =>
 		console.log('createEmailLoginToken result:', JSON.stringify(result))
 
 		// Send login email
-		await sendEmail(env, 'email-login', {
+		const sent = await sendEmail(env, 'email-login', {
 			to: email,
 			loginLink: `${env.FRONTEND_URL}/login/${loginToken}`
 		})
+
+		if (!sent) {
+			return error('Failed to send login email', 500)
+		}
 
 		await incrementRateLimit(env, ip, 'email_login', 300)
 
@@ -1273,88 +1282,83 @@ router.get('/api/admin/analytics', async (request, env, ctx, params, convex) => 
 // ==================== ADMIN PRODUCTS ====================
 
 /**
- * Update products (commits to GitHub)
+ * Manage products via Convex
  * PUT /api/admin/products
- * Body: { products: [...] }
+ * Body: { action: 'create'|'update'|'delete', product: {...} }
+ * 
+ * Supports granular product operations via Convex mutations.
+ * The frontend now calls Convex directly, so this endpoint is kept
+ * for backward compatibility and server-side admin operations.
  */
-router.put('/api/admin/products', async (request, env) => {
+router.put('/api/admin/products', async (request, env, ctx, params, convex) => {
 	const admin = await requireAdmin(request, env)
 	if (!admin) {
 		return error('Unauthorized', 401)
 	}
 
 	try {
-		const { products } = await request.json()
+		const body = await request.json()
+		const { action, product } = body
 
-		// Prepare new product.json content
-		const productData = {
-			version: new Date().toISOString().split('T')[0],
-			updatedAt: new Date().toISOString(),
-			categories: [...new Set(products.map(p => p.category).filter(Boolean))],
-			products
+		if (action === 'create' && product) {
+			const now = Date.now()
+			await convex.mutation('mutations:createProduct', {
+				productId: product.id || 'prod_' + now,
+				slug: product.slug,
+				name: product.name,
+				description: product.description || undefined,
+				shortDescription: product.shortDescription || undefined,
+				price: Number(product.price),
+				comparePrice: product.comparePrice ? Number(product.comparePrice) : undefined,
+				category: product.category || undefined,
+				subcategory: product.subcategory || undefined,
+				images: product.images || undefined,
+				stock: Number(product.stock) || 0,
+				isActive: product.isActive !== false,
+				tags: product.tags?.length ? product.tags : undefined,
+				benefits: product.benefits?.length ? product.benefits : undefined,
+				ingredients: product.ingredients || undefined,
+				usage: product.usage || undefined,
+				weight: product.weight || undefined,
+			})
+			return json({ success: true, action: 'created' })
 		}
 
-		// Get GitHub token from secrets KV or env
-		let githubToken = env.GITHUB_TOKEN
-		try {
-			const kvToken = await env.ADMIN_SECRETS?.get('github_pat')
-			if (kvToken) githubToken = kvToken
-		} catch { }
-
-		if (!githubToken) {
-			return error('GitHub token not configured', 500)
+		if (action === 'update' && product && product._id) {
+			const { _id, id, ...updates } = product
+			await convex.mutation('mutations:updateProduct', {
+				_id,
+				productId: id || updates.productId,
+				...updates,
+				price: updates.price !== undefined ? Number(updates.price) : undefined,
+				comparePrice: updates.comparePrice ? Number(updates.comparePrice) : undefined,
+				stock: updates.stock !== undefined ? Number(updates.stock) : undefined,
+			})
+			return json({ success: true, action: 'updated' })
 		}
 
-		// Get current file SHA from GitHub
-		const getResponse = await fetch(
-			`https://api.github.com/repos/${env.GITHUB_REPO}/contents/frontend/src/assets/products.json`,
-			{
-				headers: {
-					'Authorization': `token ${githubToken}`,
-					'Accept': 'application/vnd.github.v3+json',
-					'User-Agent': 'MKS-Agencies-Admin'
-				}
-			}
-		)
-
-		let sha = null
-		if (getResponse.ok) {
-			const fileData = await getResponse.json()
-			sha = fileData.sha
+		if (action === 'delete' && product && product._id) {
+			await convex.mutation('mutations:deleteProduct', {
+				_id: product._id,
+			})
+			return json({ success: true, action: 'deleted' })
 		}
 
-		// Commit updated file
-		const commitResponse = await fetch(
-			`https://api.github.com/repos/${env.GITHUB_REPO}/contents/frontend/src/assets/products.json`,
-			{
-				method: 'PUT',
-				headers: {
-					'Authorization': `token ${githubToken}`,
-					'Accept': 'application/vnd.github.v3+json',
-					'User-Agent': 'MKS-Agencies-Admin',
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					message: `Update products - ${new Date().toISOString()} (from admin page)`,
-					content: btoa(unescape(encodeURIComponent(JSON.stringify(productData, null, 2)))),
-					sha,
-					branch: 'master'
-				})
-			}
-		)
-
-		if (!commitResponse.ok) {
-			const err = await commitResponse.json()
-			console.error('GitHub commit failed:', err)
-			return error('Failed to update products', 500)
+		// Fallback: bulk seed (for migration from JSON)
+		if (body.products && Array.isArray(body.products)) {
+			await convex.mutation('mutations:seedProducts', {
+				products: body.products,
+			})
+			return json({ success: true, action: 'seeded' })
 		}
 
-		return json({ success: true })
+		return error('Invalid request. Expected action: create, update, or delete')
 	} catch (e) {
-		console.error('Product update error:', e)
-		return error('Failed to update products', 500)
+		console.error('Admin products error:', e)
+		return error('Failed to manage products', 500)
 	}
 })
+
 
 // ==================== CART & WISHLIST (Convex sync) ====================
 

@@ -12,6 +12,40 @@ import { v } from "convex/values";
 
 export default defineSchema({
     /**
+     * Products table - stores all product catalog items
+     * 
+     * Replaces the static products.json file with a dynamic database.
+     * Products are managed via the admin dashboard.
+     */
+    products: defineTable({
+        productId: v.string(), // e.g. "prod_001" - legacy ID for backward compatibility
+        slug: v.string(),
+        name: v.string(),
+        description: v.optional(v.string()),
+        shortDescription: v.optional(v.string()),
+        price: v.number(),
+        comparePrice: v.optional(v.number()),
+        category: v.optional(v.string()),
+        subcategory: v.optional(v.string()),
+        images: v.optional(v.array(v.string())),
+        stock: v.number(),
+        isActive: v.boolean(),
+        tags: v.optional(v.array(v.string())),
+        benefits: v.optional(v.array(v.string())),
+        ingredients: v.optional(v.string()),
+        usage: v.optional(v.string()),
+        weight: v.optional(v.string()),
+        metaTitle: v.optional(v.string()),
+        metaDescription: v.optional(v.string()),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+        .index("by_slug", ["slug"])
+        .index("by_category", ["category"])
+        .index("by_active", ["isActive"])
+        .index("by_product_id", ["productId"]),
+
+    /**
      * Users table - stores registered and guest users
      * 
      * Auth providers: 'google' | 'email' | 'guest'

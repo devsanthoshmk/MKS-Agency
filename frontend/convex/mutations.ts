@@ -10,6 +10,152 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 
+// ==================== PRODUCT MUTATIONS ====================
+
+/**
+ * Create a new product
+ */
+export const createProduct = mutation({
+    args: {
+        productId: v.string(),
+        slug: v.string(),
+        name: v.string(),
+        description: v.optional(v.string()),
+        shortDescription: v.optional(v.string()),
+        price: v.number(),
+        comparePrice: v.optional(v.number()),
+        category: v.optional(v.string()),
+        subcategory: v.optional(v.string()),
+        images: v.optional(v.array(v.string())),
+        stock: v.number(),
+        isActive: v.boolean(),
+        tags: v.optional(v.array(v.string())),
+        benefits: v.optional(v.array(v.string())),
+        ingredients: v.optional(v.string()),
+        usage: v.optional(v.string()),
+        weight: v.optional(v.string()),
+        metaTitle: v.optional(v.string()),
+        metaDescription: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+        return await ctx.db.insert("products", {
+            ...args,
+            createdAt: now,
+            updatedAt: now,
+        });
+    },
+});
+
+/**
+ * Update an existing product
+ */
+export const updateProduct = mutation({
+    args: {
+        _id: v.id("products"),
+        productId: v.optional(v.string()),
+        slug: v.optional(v.string()),
+        name: v.optional(v.string()),
+        description: v.optional(v.string()),
+        shortDescription: v.optional(v.string()),
+        price: v.optional(v.number()),
+        comparePrice: v.optional(v.number()),
+        category: v.optional(v.string()),
+        subcategory: v.optional(v.string()),
+        images: v.optional(v.array(v.string())),
+        stock: v.optional(v.number()),
+        isActive: v.optional(v.boolean()),
+        tags: v.optional(v.array(v.string())),
+        benefits: v.optional(v.array(v.string())),
+        ingredients: v.optional(v.string()),
+        usage: v.optional(v.string()),
+        weight: v.optional(v.string()),
+        metaTitle: v.optional(v.string()),
+        metaDescription: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const { _id, ...updates } = args;
+        const existing = await ctx.db.get(_id);
+        if (!existing) throw new Error("Product not found");
+
+        await ctx.db.patch(_id, {
+            ...updates,
+            updatedAt: Date.now(),
+        });
+        return { success: true };
+    },
+});
+
+/**
+ * Delete a product
+ */
+export const deleteProduct = mutation({
+    args: { _id: v.id("products") },
+    handler: async (ctx, args) => {
+        await ctx.db.delete(args._id);
+        return { success: true };
+    },
+});
+
+/**
+ * Seed products from JSON data (one-time migration utility)
+ * This is idempotent - it will skip products that already exist (by productId)
+ */
+export const seedProducts = mutation({
+    args: {
+        products: v.array(v.object({
+            id: v.string(),
+            slug: v.string(),
+            name: v.string(),
+            description: v.optional(v.string()),
+            shortDescription: v.optional(v.string()),
+            price: v.number(),
+            comparePrice: v.optional(v.number()),
+            category: v.optional(v.string()),
+            subcategory: v.optional(v.string()),
+            images: v.optional(v.array(v.string())),
+            stock: v.number(),
+            isActive: v.boolean(),
+            tags: v.optional(v.array(v.string())),
+            benefits: v.optional(v.array(v.string())),
+            ingredients: v.optional(v.string()),
+            usage: v.optional(v.string()),
+            weight: v.optional(v.string()),
+            metaTitle: v.optional(v.string()),
+            metaDescription: v.optional(v.string()),
+        })),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+        let created = 0;
+        let skipped = 0;
+
+        for (const product of args.products) {
+            // Check if product already exists
+            const existing = await ctx.db
+                .query("products")
+                .withIndex("by_product_id", (q) => q.eq("productId", product.id))
+                .first();
+
+            if (existing) {
+                skipped++;
+                continue;
+            }
+
+            const { id, ...rest } = product;
+            await ctx.db.insert("products", {
+                productId: id,
+                ...rest,
+                createdAt: now,
+                updatedAt: now,
+            });
+            created++;
+        }
+
+        return { created, skipped, total: args.products.length };
+    },
+});
+
 // ==================== USER MUTATIONS ====================
 
 /**

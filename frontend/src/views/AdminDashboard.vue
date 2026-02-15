@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '../../convex/_generated/api.js'
 
 // Admin child components
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard.vue'
@@ -8,6 +10,7 @@ import OrdersManager from '@/components/admin/OrdersManager.vue'
 import OrderEditModal from '@/components/admin/OrderEditModal.vue'
 import ProductsManager from '@/components/admin/ProductsManager.vue'
 import ContentManager from '@/components/admin/ContentManager.vue'
+
 
 // API URL for production/development
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
@@ -133,12 +136,19 @@ async function loadOrders() {
 
 async function loadProducts() {
   try {
-    const data = await import('@/assets/products.json')
-    products.value = data.products || []
+    const CONVEX_URL = import.meta.env.VITE_CONVEX_URL
+    if (!CONVEX_URL) {
+      console.error('VITE_CONVEX_URL not configured')
+      return
+    }
+    const client = new ConvexHttpClient(CONVEX_URL)
+    const fetchedProducts = await client.query(api.queries.getAllProductsAdmin, {})
+    products.value = fetchedProducts || []
   } catch (e) {
     console.error('Failed to load products:', e)
   }
 }
+
 
 async function loadAnalytics() {
   try {

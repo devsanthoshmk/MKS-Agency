@@ -13,12 +13,15 @@ The frontend is a **Vue.js 3** application using:
 ```
 frontend/
 ├── convex/                 # Convex database
-│   ├── schema.ts          # Database schema
-│   ├── queries.ts         # Read operations
-│   └── mutations.ts       # Write operations
+│   ├── schema.ts          # Database schema (users, orders, products, etc.)
+│   ├── queries.ts         # Read operations (products, orders, cart, etc.)
+│   ├── mutations.ts       # Write operations (products CRUD, orders, cart, etc.)
+│   └── files.ts           # File storage (image uploads)
+├── scripts/
+│   └── seed-products.mjs  # Migrate products.json → Convex
 ├── src/
 │   ├── assets/
-│   │   └── products.json  # Product catalog
+│   │   └── products.json  # Legacy product catalog (kept for reference)
 │   ├── components/        # Reusable components
 │   │   ├── admin/         # Admin dashboard components
 │   │   │   ├── AnalyticsDashboard.vue  # Stats & metrics
@@ -39,7 +42,7 @@ frontend/
 │   │   ├── useAuth.js     # Authentication
 │   │   ├── useCart.js     # Shopping cart
 │   │   ├── useOrders.js   # Order management
-│   │   ├── useProducts.js # Product catalog
+│   │   ├── useProducts.js # Product catalog (Convex-backed)
 │   │   └── useUI.js       # UI state
 │   ├── views/             # Page components
 │   │   ├── HomePage.vue   # Main shop page
@@ -233,7 +236,7 @@ The admin dashboard (`/admin`) provides a comprehensive interface for managing t
 
 - **Analytics Dashboard** - Overview of orders, revenue, and status metrics
 - **Order Management** - Search, filter, and manage orders with full editing capabilities
-- **Product Management** - CRUD operations for products (commits to GitHub)
+- **Product Management** - CRUD operations for products (via Convex mutations)
 - **Content Management** - CMS for website content (coming soon)
 
 ### Admin Components
@@ -243,7 +246,7 @@ The admin dashboard (`/admin`) provides a comprehensive interface for managing t
 | `AnalyticsDashboard.vue` | Displays order statistics, revenue, and status breakdown |
 | `OrdersManager.vue` | Order list with search, filter, and selection |
 | `OrderEditModal.vue` | Full order editing with status updates, tracking info, and notes |
-| `ProductsManager.vue` | Product list with create/edit/delete operations |
+| `ProductsManager.vue` | Product list with create/edit/delete via Convex mutations |
 | `ContentManager.vue` | Placeholder for future CMS features |
 
 ### Order Status Updates
@@ -287,6 +290,7 @@ Add to `index.html`:
 ### Schema (convex/schema.ts)
 
 Tables:
+- `products` - Product catalog (primary source of truth)
 - `users` - User profiles
 - `orders` - Order records
 - `orderItems` - Line items
@@ -297,16 +301,36 @@ Tables:
 ### Using Convex in Components
 
 ```javascript
-import { useQuery, useMutation } from 'convex-vue'
-import { api } from '../convex/_generated/api'
+// Using ConvexHttpClient (for simple query/mutation without subscriptions)
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '../../convex/_generated/api.js'
 
-// Query example
-const orders = useQuery(api.queries.getUserOrders, { userId })
-
-// Mutation example
-const createOrder = useMutation(api.mutations.createOrder)
-await createOrder({ ... })
+const client = new ConvexHttpClient(import.meta.env.VITE_CONVEX_URL)
+const products = await client.query(api.queries.getAllProducts, {})
 ```
+
+```javascript
+// Using ConvexClient (for mutations / interactive operations)
+import { ConvexClient } from 'convex/browser'
+import { api } from '../../../convex/_generated/api.js'
+
+const client = new ConvexClient(import.meta.env.VITE_CONVEX_URL)
+await client.mutation(api.mutations.createProduct, { name: 'Test', ... })
+```
+
+### Seed Script (scripts/seed-products.mjs)
+
+Migrates product data from the legacy `products.json` into the Convex `products` table:
+
+```bash
+cd frontend
+node scripts/seed-products.mjs
+```
+
+- Reads from `src/assets/products.json`
+- Connects to Convex using `VITE_CONVEX_URL` from `.env.local`
+- Idempotent: skips products that already exist (matched by `productId`)
+- Reports created/skipped counts
 
 ---
 
@@ -376,6 +400,18 @@ fetch(`${API_URL}/api/endpoint`, { ... })
 | Email Server | https://mksagencies-email.netlify.app |
 | Database | https://tame-ermine-520.convex.cloud |
 
-# Future changes:
+## Changelog
 
-- use product table in convex instead of products.json
+### Products Migration (Feb 2026)
+
+Products have been migrated from static `products.json` to the Convex `products` table.
+
+**What changed:**
+- `useProducts.js` — Now fetches from Convex via `ConvexHttpClient` instead of `import('@/assets/products.json')`
+- `ProductsManager.vue` — Save/delete now call Convex mutations directly (no more backend API / GitHub commits)
+- `AdminDashboard.vue` — `loadProducts()` queries Convex `getAllProductsAdmin` instead of importing JSON
+- `products.json` — Kept as legacy reference; no longer the source of truth
+
+**Future improvements:**
+- Optimize queries to fetch only needed product fields (pagination, partial selects)
+- Add real-time subscriptions for admin product list updates

@@ -13,6 +13,84 @@ import { v } from "convex/values";
 
 // ==================== PUBLIC QUERIES ====================
 
+// needs opotimization past workflow uses static build products.json and github pat token to change that to edit products in admin page but now that everything in convex we can incorporate things like getting only what products we need using queries will do it later 
+
+// ==================== PRODUCT QUERIES ====================
+
+/**
+ * Get all active products for public storefront
+ */
+export const getAllProducts = query({
+    args: {},
+    handler: async (ctx) => {
+        const products = await ctx.db
+            .query("products")
+            .withIndex("by_active", (q) => q.eq("isActive", true))
+            .collect();
+
+        // Map to frontend format (use productId as "id" for backwards compatibility)
+        return products.map((p) => ({
+            ...p,
+            id: p.productId,
+        }));
+    },
+});
+
+/**
+ * Get product by slug
+ */
+export const getProductBySlug = query({
+    args: { slug: v.string() },
+    handler: async (ctx, args) => {
+        const product = await ctx.db
+            .query("products")
+            .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+            .first();
+
+        if (!product) return null;
+
+        return {
+            ...product,
+            id: product.productId,
+        };
+    },
+});
+
+/**
+ * Get all distinct categories from active products
+ */
+export const getProductCategories = query({
+    args: {},
+    handler: async (ctx) => {
+        const products = await ctx.db
+            .query("products")
+            .withIndex("by_active", (q) => q.eq("isActive", true))
+            .collect();
+
+        const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
+        return categories.sort();
+    },
+});
+
+/**
+ * Get all products for admin (including inactive)
+ */
+export const getAllProductsAdmin = query({
+    args: {},
+    handler: async (ctx) => {
+        const products = await ctx.db
+            .query("products")
+            .collect();
+
+        return products.map((p) => ({
+            ...p,
+            id: p.productId,
+        }));
+    },
+});
+
+
+
 /**
  * Get order analytics for admin dashboard
  * This is protected by admin auth in the Worker, not here

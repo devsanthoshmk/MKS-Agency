@@ -1,5 +1,5 @@
 # MKS Agencies — AI Agent Rules
-# Last Updated: 2026-02-15
+# Last Updated: 2026-02-16
 
 ## IDENTITY
 - **Project**: MKS Agencies — Production e-commerce platform for Ayurvedic products
@@ -14,6 +14,12 @@
 2. **All Workflows** (`.agent/workflows/*.md`) — Update or create workflows for repeatable processes
 3. **User Rules** — Ensure consistency with established project rules
 4. **Knowledge Items** — Document architectural decisions and discoveries
+5. **Project Documentation** (`docs/`) — Keep docs in sync with codebase changes:
+   - `docs/DATABASE.md` — Update when schemas, queries, mutations, or indexes change
+   - `docs/BACKEND.md` — Update when API routes, middleware, or Worker logic changes
+   - `docs/FRONTEND.md` — Update when components, composables, views, or routing changes
+   - `docs/EMAIL_SERVER.md` — Update when email templates, triggers, or Netlify functions change
+   - **If a doc doesn't exist for a new area** — Create one following the same format
 
 ### DOCUMENTING DISCOVERIES — OFFLOAD FUTURE WORK
 **You MUST add to this AGENTS.md file whenever you:**
@@ -82,6 +88,7 @@
 - Commit `.env` files with real secrets
 - Use `.collect()` on large tables without `.take(N)` or index filtering
 - Use `any` type in Convex TypeScript files
+- **Manually construct Convex storage URLs** — Always use `api.files.getFileUrl` query after upload. Pattern `${CONVEX_SITE_URL}/api/storage/${storageId}` returns 404!
 
 ## ORDER STATUS FLOW (SACRED — never modify without asking)
 ```
@@ -140,6 +147,47 @@ MKS-Agency/
 - **Convex**: TypeScript with `v.` validators, always use indexes
 - **Components**: PascalCase files, `defineProps()`, `defineEmits()`
 - **Composables**: `useXxx.js` with module-level singleton state
+
+## CONVEX PATTERNS
+
+### File Upload (Product Images)
+**✅ CORRECT workflow:**
+```javascript
+// 1. Get upload URL via mutation
+const uploadUrl = await convexClient.mutation(api.files.generateUploadUrl, {})
+
+// 2. Upload file directly to Convex
+const result = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': file.type }, body: file })
+const { storageId } = await result.json()
+
+// 3. Get public URL via query (calls ctx.storage.getUrl())
+const publicUrl = await convexClient.query(api.files.getFileUrl, { storageId })
+
+// 4. Save publicUrl to product.images[]
+```
+
+**❌ WRONG:**
+```javascript
+// DO NOT use string paths for mutations/queries
+await convexClient.mutation('files:generateUploadUrl', {})  // ❌ Won't work!
+
+// DO NOT manually construct storage URLs
+const url = `${CONVEX_SITE_URL}/api/storage/${storageId}`  // ❌ Returns 404!
+```
+
+### Mutation/Query Calls
+**✅ CORRECT:**
+```javascript
+import { api } from '../convex/_generated/api.js'
+await convexClient.mutation(api.files.generateUploadUrl, {})
+await convexClient.query(api.queries.getAllProducts, {})
+```
+
+**❌ WRONG:**
+```javascript
+await convexClient.mutation('files:generateUploadUrl', {})  // ❌ String paths don't work
+```
+
 
 ## WHEN IN DOUBT
 1. Check existing code patterns FIRST
