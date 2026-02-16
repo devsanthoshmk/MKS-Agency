@@ -160,6 +160,12 @@ async function loadOrders() {
     const response = await fetch(`${API_URL}/api/admin/orders`, {
       headers: { 'Authorization': `Bearer ${adminToken.value}` }
     })
+    
+    if (response.status === 401) {
+      handleLogout()
+      return
+    }
+    
     const data = await response.json()
     orders.value = data.orders || []
   } catch (e) {
@@ -190,6 +196,12 @@ async function loadAnalytics() {
     const response = await fetch(`${API_URL}/api/admin/analytics`, {
       headers: { 'Authorization': `Bearer ${adminToken.value}` }
     })
+    
+    if (response.status === 401) {
+      handleLogout()
+      return
+    }
+
     const data = await response.json()
     analytics.value = data
   } catch (e) {
@@ -221,6 +233,11 @@ async function handleOrderSave(updatedOrder) {
       body: JSON.stringify(updatedOrder)
     })
 
+    if (response.status === 401) {
+      handleLogout()
+      return
+    }
+
     if (response.ok) {
       loadOrders()
       loadAnalytics()
@@ -243,6 +260,11 @@ async function handleOrderStatusUpdate({ orderId, status }) {
       },
       body: JSON.stringify({ status })
     })
+
+    if (response.status === 401) {
+      handleLogout()
+      return
+    }
 
     if (response.ok) {
       loadOrders()

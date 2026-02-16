@@ -932,7 +932,7 @@ router.post('/api/admin/login', async (request, env) => {
 		const token = await createJWT(
 			{ isAdmin: true },
 			env.JWT_SECRET,
-			7200 // 2 hours
+			604800 // 7 days
 		)
 
 		return json({ success: true, token })
