@@ -366,10 +366,8 @@ const sortOptions = [
           <!-- Brand -->
           <div class="md:col-span-2">
             <div class="flex items-center gap-2 mb-4">
-              <div class="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
-                <span class="text-white text-xl font-bold">M</span>
-              </div>
-              <span class="text-xl font-display font-bold">MKS Agencies</span>
+              <img src="/logo.jpeg" alt="MKS AGENCY" class="w-10 h-10 rounded-full object-cover shadow-sm" />
+              <span class="text-xl font-display font-bold">MKS AGENCY</span>
             </div>
             <p class="text-surface-400 max-w-md">
               Bringing the ancient wisdom of Siddha and Ayurveda to modern wellness. Authentic medicines for your holistic health journey.
@@ -399,7 +397,7 @@ const sortOptions = [
         </div>
         
         <div class="border-t border-surface-800 mt-8 pt-8 text-center text-surface-500 text-sm">
-          <p>© 2026 MKS Agencies. All rights reserved.</p>
+          <p>© 2026 MKS AGENCY. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -293,10 +293,8 @@ async function handleOrderStatusUpdate({ orderId, status }) {
       <div class="login-card">
         <!-- Logo area -->
         <div class="login-logo">
-          <div class="login-logo__icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-            </svg>
+          <div class="login-logo__icon overflow-hidden">
+            <img src="/logo.jpeg" alt="MKS Admin" class="w-full h-full object-cover" />
           </div>
           <h1 class="login-title">MKS Admin</h1>
           <p class="login-subtitle">Secure dashboard access</p>
@@ -349,10 +347,8 @@ async function handleOrderStatusUpdate({ orderId, status }) {
         @mouseleave="sidebarExpanded = false"
       >
         <div class="sidebar__logo">
-          <div class="sidebar__logo-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-            </svg>
+          <div class="sidebar__logo-icon flex items-center justify-center overflow-hidden rounded-full w-8 h-8">
+            <img src="/logo.jpeg" alt="MKS Admin" class="w-full h-full object-cover" />
           </div>
           <span class="sidebar__logo-text" v-show="sidebarExpanded">MKS Admin</span>
         </div>
@@ -418,10 +414,8 @@ async function handleOrderStatusUpdate({ orderId, status }) {
       <header class="topbar">
         <div class="topbar__left">
           <!-- Mobile logo -->
-          <div class="topbar__mobile-logo">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-            </svg>
+          <div class="topbar__mobile-logo flex items-center justify-center overflow-hidden rounded-full w-8 h-8">
+            <img src="/logo.jpeg" alt="MKS Admin" class="w-full h-full object-cover" />
           </div>
           <div>
             <h1 class="topbar__title">{{ activeTabLabel }}</h1>

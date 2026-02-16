@@ -131,9 +131,7 @@ watch(isAuthModalOpen, (open) => {
         <!-- Content -->
         <div class="p-8 text-center">
           <!-- Logo -->
-          <div class="w-16 h-16 rounded-full gradient-primary flex items-center justify-center mx-auto mb-6">
-            <span class="text-white text-2xl font-bold">M</span>
-          </div>
+          <img src="/logo.jpeg" alt="MKS AGENCY" class="w-16 h-16 rounded-full object-cover mx-auto mb-6 shadow-sm" />
           
           <h2 class="text-2xl font-display font-bold text-surface-900 mb-2">Welcome</h2>
           <p class="text-surface-500 mb-8">Sign in to access your account and orders</p>
