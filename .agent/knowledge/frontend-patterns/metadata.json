@@ -1,0 +1,23 @@
+{
+    "title": "MKS Agencies — Frontend Patterns (Vue.js + Cloudflare Pages)",
+    "summary": "Frontend development patterns for the MKS Agencies Vue.js 3 application. Covers Composition API with <script setup>, composable singleton pattern, Convex-Vue integration (useQuery/useMutation), Tailwind CSS 4 with @tailwindcss/vite, routing in main.js, component conventions (defineProps, defineEmits), performance patterns (lazy loading, debounce, computed), and the slide-panel UI pattern.",
+    "createdAt": "2026-02-16T10:43:00+05:30",
+    "updatedAt": "2026-02-16T10:43:00+05:30",
+    "source": "agents.md (Section 4, 10, 13)",
+    "tags": [
+        "frontend",
+        "vue",
+        "composables",
+        "tailwind",
+        "cloudflare-pages",
+        "performance"
+    ],
+    "references": [
+        "agents.md",
+        "docs/FRONTEND.md",
+        "frontend/src/main.js",
+        "frontend/src/composables/",
+        "frontend/src/views/",
+        "frontend/src/components/"
+    ]
+}

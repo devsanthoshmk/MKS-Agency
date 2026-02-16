@@ -1,0 +1,24 @@
+{
+    "title": "MKS Agencies — Database Patterns (Convex)",
+    "summary": "Convex database patterns and rules for MKS Agencies. Covers the schema as source of truth (frontend/convex/schema.ts), all tables (users, orders, orderItems, orderStatusHistory, wishlist, cart) with their indexes, correct query patterns (always use withIndex, never filter), mutation validation with v. validators, file upload workflow (generateUploadUrl → upload → getFileUrl), schema change protocol, and critical gotchas (never .collect() without .take(N), never manually construct storage URLs).",
+    "createdAt": "2026-02-16T10:43:00+05:30",
+    "updatedAt": "2026-02-16T10:43:00+05:30",
+    "source": "agents.md (Section 6), AGENTS.md",
+    "tags": [
+        "database",
+        "convex",
+        "schema",
+        "queries",
+        "mutations",
+        "indexes",
+        "file-upload"
+    ],
+    "references": [
+        "agents.md",
+        "docs/DATABASE.md",
+        "frontend/convex/schema.ts",
+        "frontend/convex/queries.ts",
+        "frontend/convex/mutations.ts",
+        "frontend/convex/files.ts"
+    ]
+}

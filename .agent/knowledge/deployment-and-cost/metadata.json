@@ -1,0 +1,23 @@
+{
+    "title": "MKS Agencies — Deployment, Cost Optimization & Email Server",
+    "summary": "Deployment procedures, cost optimization strategies, and email server patterns for MKS Agencies. Covers deployment commands for all 4 services (Workers, Pages, Netlify, Convex), pre-deployment checklist, free tier limits and mitigation strategies (100k req/day Workers, 125k invocations/month Netlify, 500 builds/month Pages), email types (order confirmation, guest verification, admin notification, magic links, status updates), Gmail SMTP setup, and the breaking change protocol.",
+    "createdAt": "2026-02-16T10:43:00+05:30",
+    "updatedAt": "2026-02-16T10:43:00+05:30",
+    "source": "agents.md (Section 7, 9, 11, 14)",
+    "tags": [
+        "deployment",
+        "cost",
+        "email",
+        "netlify",
+        "free-tier",
+        "breaking-changes"
+    ],
+    "references": [
+        "agents.md",
+        "docs/EMAIL_SERVER.md",
+        "email-server/functions/email.js",
+        "email-server/netlify.toml",
+        ".agent/workflows/deployment.md",
+        ".agent/workflows/breaking-change-protocol.md"
+    ]
+}

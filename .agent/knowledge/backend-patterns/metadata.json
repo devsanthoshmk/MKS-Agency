@@ -1,0 +1,22 @@
+{
+    "title": "MKS Agencies — Backend Patterns (Cloudflare Workers)",
+    "summary": "Backend development patterns for the Cloudflare Workers API. Covers single-file Worker architecture (src/index.js), route matching pattern, response format ({ success, data/error }), available env bindings (secrets, vars, KV), ConvexHttpClient usage per-request, KV-based rate limiting, admin auth flow (passcode → KV → JWT), Web Crypto API for JWT signing, and Workers constraints (1MB bundle, 10ms CPU, no Node.js APIs).",
+    "createdAt": "2026-02-16T10:43:00+05:30",
+    "updatedAt": "2026-02-16T10:43:00+05:30",
+    "source": "agents.md (Section 5, 8, 12)",
+    "tags": [
+        "backend",
+        "cloudflare-workers",
+        "api",
+        "jwt",
+        "rate-limiting",
+        "security"
+    ],
+    "references": [
+        "agents.md",
+        "docs/BACKEND.md",
+        "backend/src/index.js",
+        "backend/wrangler.jsonc",
+        "backend/wrangler.production.jsonc"
+    ]
+}

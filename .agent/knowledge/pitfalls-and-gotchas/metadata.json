@@ -1,0 +1,20 @@
+{
+    "title": "MKS Agencies — Common Pitfalls, Gotchas & Debugging Guide",
+    "summary": "Known pitfalls, common mistakes, and debugging patterns discovered during MKS Agencies development. Key gotchas: manually constructing Convex storage URLs returns 404 (use api.files.getFileUrl instead), string paths for Convex mutations don't work (use api.* objects), .collect() without .take(N) causes unbounded queries, Node.js APIs crash Workers, localStorage for auth tokens is risky. Also covers the order status flow (SACRED, never modify), and the testing approach (Vitest + Workers pool).",
+    "createdAt": "2026-02-16T10:43:00+05:30",
+    "updatedAt": "2026-02-16T10:43:00+05:30",
+    "source": "AGENTS.md, agents.md, conversation 8bc0164c (Fixing Image Uploads)",
+    "tags": [
+        "gotchas",
+        "pitfalls",
+        "debugging",
+        "common-mistakes",
+        "testing"
+    ],
+    "references": [
+        "AGENTS.md",
+        "agents.md",
+        "frontend/convex/files.ts",
+        "frontend/src/components/admin/ProductsManager.vue"
+    ]
+}

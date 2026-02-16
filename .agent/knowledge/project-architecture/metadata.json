@@ -1,0 +1,22 @@
+{
+    "title": "MKS Agencies — Project Architecture & Monorepo Structure",
+    "summary": "Complete architecture overview of the MKS Agencies production e-commerce platform. Covers monorepo structure (frontend/, backend/, email-server/, docs/), tech stack decisions (Vue 3, Cloudflare Workers, Convex, Netlify), file naming conventions, and production URLs. Essential context for ANY task in this codebase.",
+    "createdAt": "2026-02-16T10:43:00+05:30",
+    "updatedAt": "2026-02-16T10:43:00+05:30",
+    "source": "AGENTS.md, agents.md",
+    "tags": [
+        "architecture",
+        "monorepo",
+        "tech-stack",
+        "structure",
+        "production"
+    ],
+    "references": [
+        "AGENTS.md",
+        "agents.md",
+        "docs/BACKEND.md",
+        "docs/FRONTEND.md",
+        "docs/DATABASE.md",
+        "docs/EMAIL_SERVER.md"
+    ]
+}

@@ -1,0 +1,25 @@
+{
+    "title": "MKS Agencies — Security, Secrets & Environment Management",
+    "summary": "Security practices, authentication flows, secrets management, and environment variable configuration for MKS Agencies. Covers Google OAuth verification, JWT signing with Web Crypto API, admin auth with bcrypt + KV, magic links, guest checkout tokens, input validation patterns, XSS prevention, CORS configuration, rate limiting (KV-backed), and the complete env var mapping (what goes where: Workers secrets, wrangler vars, frontend VITE_ vars, Netlify env vars).",
+    "createdAt": "2026-02-16T10:43:00+05:30",
+    "updatedAt": "2026-02-16T10:43:00+05:30",
+    "source": "agents.md (Section 8, 15)",
+    "tags": [
+        "security",
+        "auth",
+        "jwt",
+        "oauth",
+        "secrets",
+        "environment",
+        "cors",
+        "rate-limiting"
+    ],
+    "references": [
+        "agents.md",
+        "docs/BACKEND.md",
+        "backend/src/index.js",
+        "backend/wrangler.jsonc",
+        "backend/wrangler.production.jsonc",
+        ".env.example"
+    ]
+}
