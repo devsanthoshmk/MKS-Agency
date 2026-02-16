@@ -321,6 +321,12 @@ removeFromCart({ userId, productId })
 
 // Clear cart
 clearCart({ userId })
+
+// Sync local items to server cart (merges + updates)
+syncCartItems({ 
+  userId, 
+  items: [{ productId, productData, quantity }] 
+})
 ```
 
 ### Wishlist Mutations

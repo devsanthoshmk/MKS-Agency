@@ -606,6 +606,67 @@ export const clearCart = mutation({
     },
 });
 
+/**
+ * Sync local cart items with server
+ * Merges local items into server cart
+ */
+export const syncCartItems = mutation({
+    args: {
+        userId: v.id("users"),
+        items: v.array(v.object({
+            productId: v.string(),
+            productData: v.object({
+                id: v.string(),
+                slug: v.string(),
+                name: v.string(),
+                price: v.number(),
+                comparePrice: v.optional(v.number()),
+                image: v.optional(v.string()),
+                category: v.optional(v.string()),
+                stock: v.optional(v.number()),
+            }),
+            quantity: v.number(),
+        })),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+
+        for (const item of args.items) {
+            const existingItem = await ctx.db
+                .query("cart")
+                .withIndex("by_user_product", (q) =>
+                    q.eq("userId", args.userId).eq("productId", item.productId)
+                )
+                .first();
+
+            if (existingItem) {
+                // Add quantities for existing items
+                const newQuantity = existingItem.quantity + item.quantity;
+                await ctx.db.patch(existingItem._id, {
+                    quantity: newQuantity,
+                    updatedAt: now,
+                });
+            } else {
+                // Insert new items
+                await ctx.db.insert("cart", {
+                    userId: args.userId,
+                    productId: item.productId,
+                    productData: item.productData,
+                    quantity: item.quantity,
+                    createdAt: now,
+                    updatedAt: now,
+                });
+            }
+        }
+
+        // Return full updated cart
+        return await ctx.db
+            .query("cart")
+            .withIndex("by_user", (q) => q.eq("userId", args.userId))
+            .collect();
+    }
+});
+
 // ==================== WISHLIST MUTATIONS ====================
 
 /**

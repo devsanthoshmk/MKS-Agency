@@ -146,7 +146,11 @@ const result = await continueAsGuest({
 
 ### useCart
 
-Shopping cart with localStorage persistence.
+Shopping cart with optimistic updates and robust Convex DB synchronization.
+
+- **Guest Users**: Items stored in `localStorage`.
+- **Authenticated Users**: Items stored in Convex `cart` table.
+- **Login Sync**: Local guest cart is automatically merged with server cart upon login.
 
 ```javascript
 import { useCart } from '@/composables/useCart'
@@ -156,14 +160,16 @@ const {
   itemCount,     // Total item count
   subtotal,      // Cart subtotal
   savings,       // Savings from compare prices
+  isSyncing,     // Sync status with backend
   
-  addItem,       // Add product to cart
+  addItem,       // Add product to cart (optimistic + sync)
   removeItem,    // Remove from cart
   updateQuantity,// Change quantity
   clearCart,     // Empty cart
   isInCart,      // Check if product in cart
   openCart,      // Open cart panel
   closeCart,     // Close cart panel
+  syncCart,      // Manually trigger sync (usually auto-handled)
 } = useCart()
 
 // Example: Add to cart
