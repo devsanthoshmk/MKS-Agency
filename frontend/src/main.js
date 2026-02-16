@@ -74,9 +74,16 @@ const router = createRouter({
         },
         {
             path: '/admin',
-            name: 'admin',
             component: AdminDashboard,
-            meta: { title: 'Admin Dashboard - MKS Agencies' }
+            meta: { title: 'Admin Dashboard - MKS Agencies' },
+            redirect: '/admin/analytics',
+            children: [
+                { path: 'analytics', name: 'admin-analytics', component: { render: () => null }, meta: { title: 'Overview - MKS Admin' } },
+                { path: 'orders', name: 'admin-orders', component: { render: () => null }, meta: { title: 'Orders - MKS Admin' } },
+                { path: 'products', name: 'admin-products', component: { render: () => null }, meta: { title: 'Products - MKS Admin' } },
+                { path: 'content', name: 'admin-content', component: { render: () => null }, meta: { title: 'Content - MKS Admin' } },
+                { path: 'settings', name: 'admin-settings', component: { render: () => null }, meta: { title: 'Settings - MKS Admin' } },
+            ]
         },
         {
             path: '/:pathMatch(.*)*',
@@ -94,8 +101,8 @@ const router = createRouter({
         if (to.hash) {
             return { el: to.hash, behavior: 'smooth' }
         }
-        // Don't scroll to top when switching between modal routes
-        if (to.name === 'product-detail' || to.name === 'checkout' || to.name === 'orders') {
+        // Don't scroll to top when switching between modal routes or admin tabs
+        if (to.name === 'product-detail' || to.name === 'checkout' || to.name === 'orders' || to.path.startsWith('/admin')) {
             return false
         }
         return { top: 0 }

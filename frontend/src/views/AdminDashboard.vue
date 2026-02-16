@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ConvexHttpClient } from 'convex/browser'
 import { api } from '../../convex/_generated/api.js'
 
@@ -16,6 +16,7 @@ import ContentManager from '@/components/admin/ContentManager.vue'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 
 const router = useRouter()
+const route = useRoute()
 
 // Auth state
 const isAuthenticated = ref(false)
@@ -23,15 +24,48 @@ const isLoading = ref(false)
 const passcode = ref('')
 const authError = ref('')
 const adminToken = ref(null)
+const showPasscode = ref(false)
 
-// Tab state
-const activeTab = ref('orders')
+// Tab state — derived from route path (industry standard)
+const activeTab = computed(() => {
+  const path = route.path.replace('/admin/', '').replace('/admin', '')
+  const validTabs = ['analytics', 'orders', 'products', 'content', 'settings']
+  return validTabs.includes(path) ? path : 'analytics'
+})
+
+function setActiveTab(tabId) {
+  router.push(`/admin/${tabId}`)
+}
+const sidebarExpanded = ref(false)
 const tabs = [
-  { id: 'orders', label: 'Orders', icon: '📦' },
-  { id: 'products', label: 'Products', icon: '🛍️' },
-  { id: 'content', label: 'Content', icon: '📝' },
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
+  { id: 'analytics', label: 'Overview', icon: 'chart-bar' },
+  { id: 'orders', label: 'Orders', icon: 'shopping-bag' },
+  { id: 'products', label: 'Products', icon: 'cube' },
+  { id: 'content', label: 'Content', icon: 'document-text' },
+  { id: 'settings', label: 'Settings', icon: 'cog' },
 ]
+
+// Computed title based on active tab
+const activeTabLabel = computed(() => {
+  return tabs.find(t => t.id === activeTab.value)?.label || 'Dashboard'
+})
+
+// Greeting based on time
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+})
+
+const currentDate = computed(() => {
+  return new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+})
 
 // Orders state
 const orders = ref([])
@@ -99,6 +133,7 @@ function handleLogout() {
   localStorage.removeItem('mks_admin_token')
   router.push('/')
 }
+
 
 // Check stored token
 onMounted(() => {
@@ -174,148 +209,936 @@ function handleOrderUpdated() {
 function closeOrderModal() {
   selectedOrder.value = null
 }
+
+async function handleOrderSave(updatedOrder) {
+  try {
+    const response = await fetch(`${API_URL}/api/admin/orders/${updatedOrder._id || updatedOrder.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken.value}`
+      },
+      body: JSON.stringify(updatedOrder)
+    })
+
+    if (response.ok) {
+      loadOrders()
+      loadAnalytics()
+      closeOrderModal()
+    } else {
+      console.error('Failed to update order')
+    }
+  } catch (e) {
+    console.error('Error updating order:', e)
+  }
+}
+
+async function handleOrderStatusUpdate({ orderId, status }) {
+  try {
+    const response = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken.value}`
+      },
+      body: JSON.stringify({ status })
+    })
+
+    if (response.ok) {
+      loadOrders()
+      loadAnalytics()
+    } else {
+      console.error('Failed to update status')
+    }
+  } catch (e) {
+    console.error('Error updating status:', e)
+  }
+}
 </script>
 
 <template>
-  <div class="min-h-screen bg-surface-100">
-    <!-- Login Screen -->
-    <div v-if="!isAuthenticated" class="min-h-screen flex items-center justify-center p-4">
-      <div class="max-w-md w-full">
-        <div class="bg-white rounded-2xl shadow-xl p-8">
-          <div class="text-center mb-8">
-            <div class="w-16 h-16 rounded-full gradient-primary flex items-center justify-center mx-auto mb-4">
-              <span class="text-white text-2xl font-bold">M</span>
-            </div>
-            <h1 class="text-2xl font-display font-bold text-surface-900">Admin Access</h1>
-            <p class="text-surface-500 mt-2">Enter passcode to continue</p>
-          </div>
+  <div class="admin-root">
+    <!-- ========== LOGIN SCREEN ========== -->
+    <div v-if="!isAuthenticated" class="login-screen">
+      <!-- Animated Background -->
+      <div class="login-bg">
+        <div class="login-orb login-orb--1"></div>
+        <div class="login-orb login-orb--2"></div>
+        <div class="login-orb login-orb--3"></div>
+        <div class="login-noise"></div>
+      </div>
 
-          <form @submit.prevent="handleLogin" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-surface-700 mb-1">Passcode</label>
+      <div class="login-card">
+        <!-- Logo area -->
+        <div class="login-logo">
+          <div class="login-logo__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <h1 class="login-title">MKS Admin</h1>
+          <p class="login-subtitle">Secure dashboard access</p>
+        </div>
+
+        <form @submit.prevent="handleLogin" class="login-form">
+          <div class="login-field">
+            <label class="login-label">Passcode</label>
+            <div class="login-input-wrap">
               <input
                 v-model="passcode"
-                type="password"
-                class="input"
-                placeholder="Enter admin passcode"
+                :type="showPasscode ? 'text' : 'password'"
+                class="login-input"
+                placeholder="Enter your passcode"
                 autofocus
               />
-              <p v-if="authError" class="text-red-500 text-sm mt-1">{{ authError }}</p>
+              <button type="button" class="login-eye" @click="showPasscode = !showPasscode" tabindex="-1">
+                <svg v-if="!showPasscode" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
             </div>
+            <p v-if="authError" class="login-error">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              {{ authError }}
+            </p>
+          </div>
 
-            <button
-              type="submit"
-              class="w-full btn btn-primary btn-lg"
-              :disabled="isLoading"
-            >
-              <span v-if="isLoading" class="spinner mr-2" />
-              {{ isLoading ? 'Verifying...' : 'Access Dashboard' }}
-            </button>
-          </form>
-
-          <button
-            class="w-full btn btn-ghost mt-4"
-            @click="router.push('/')"
-          >
-            ← Back to Store
+          <button type="submit" class="login-btn" :disabled="isLoading">
+            <span v-if="isLoading" class="login-btn__spinner"></span>
+            <span>{{ isLoading ? 'Verifying...' : 'Unlock Dashboard' }}</span>
+            <svg v-if="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
-        </div>
+        </form>
+
+        <button class="login-back" @click="router.push('/')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          Back to Store
+        </button>
       </div>
     </div>
 
-    <!-- Dashboard -->
-    <div v-else>
-      <!-- Header -->
-      <header class="bg-white shadow-sm sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full gradient-primary flex items-center justify-center">
-              <span class="text-white font-bold">M</span>
-            </div>
-            <div>
-              <h1 class="text-lg font-bold text-surface-900">Admin Dashboard</h1>
-              <p class="text-sm text-surface-500">MKS Agencies</p>
-            </div>
+    <!-- ========== DASHBOARD LAYOUT ========== -->
+    <div v-else class="dashboard-layout">
+      
+      <!-- Desktop Sidebar -->
+      <nav
+        class="sidebar"
+        :class="{ 'sidebar--expanded': sidebarExpanded }"
+        @mouseenter="sidebarExpanded = true"
+        @mouseleave="sidebarExpanded = false"
+      >
+        <div class="sidebar__logo">
+          <div class="sidebar__logo-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+            </svg>
           </div>
-          <div class="flex items-center gap-3">
-            <button @click="loadData" class="btn btn-ghost" title="Refresh data">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-            <button @click="handleLogout" class="btn btn-secondary">Logout</button>
+          <span class="sidebar__logo-text" v-show="sidebarExpanded">MKS Admin</span>
+        </div>
+
+        <div class="sidebar__nav">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            @click="setActiveTab(tab.id)"
+            class="sidebar__item"
+            :class="{ 'sidebar__item--active': activeTab === tab.id }"
+            :title="tab.label"
+          >
+            <div class="sidebar__icon">
+              <!-- Chart Bar -->
+              <svg v-if="tab.icon === 'chart-bar'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+              <!-- Shopping Bag -->
+              <svg v-else-if="tab.icon === 'shopping-bag'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              <!-- Cube -->
+              <svg v-else-if="tab.icon === 'cube'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <!-- Document Text -->
+              <svg v-else-if="tab.icon === 'document-text'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <!-- Cog -->
+              <svg v-else-if="tab.icon === 'cog'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </div>
+            <span class="sidebar__label" v-show="sidebarExpanded">{{ tab.label }}</span>
+            <div v-if="activeTab === tab.id" class="sidebar__indicator"></div>
+          </button>
+        </div>
+
+        <!-- Sidebar footer -->
+        <div class="sidebar__footer">
+          <button class="sidebar__item sidebar__item--logout" @click="handleLogout" title="Logout">
+            <div class="sidebar__icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <span class="sidebar__label" v-show="sidebarExpanded">Logout</span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Mobile Bottom Navigation -->
+      <nav class="mobile-nav">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          @click="setActiveTab(tab.id)"
+          class="mobile-nav__item"
+          :class="{ 'mobile-nav__item--active': activeTab === tab.id }"
+        >
+          <div class="mobile-nav__icon">
+            <svg v-if="tab.icon === 'chart-bar'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+            <svg v-else-if="tab.icon === 'shopping-bag'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <svg v-else-if="tab.icon === 'cube'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            <svg v-else-if="tab.icon === 'document-text'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <svg v-else-if="tab.icon === 'cog'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </div>
+          <span class="mobile-nav__label">{{ tab.label }}</span>
+        </button>
+      </nav>
+
+      <!-- Top Header Bar -->
+      <header class="topbar">
+        <div class="topbar__left">
+          <!-- Mobile logo -->
+          <div class="topbar__mobile-logo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="topbar__title">{{ activeTabLabel }}</h1>
+            <p class="topbar__subtitle">{{ greeting }} — {{ currentDate }}</p>
+          </div>
+        </div>
+        <div class="topbar__actions">
+          <button @click="loadData" class="topbar__btn" title="Refresh data">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+          <button @click="handleLogout" class="topbar__btn topbar__btn--logout md:hidden" title="Logout">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
         </div>
       </header>
 
-      <!-- Main Content -->
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Analytics Dashboard -->
-        <AnalyticsDashboard :analytics="analytics" class="mb-6" />
-
-        <!-- Tabs -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div class="flex border-b border-surface-200">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              class="flex-1 py-4 text-center font-medium transition-colors flex items-center justify-center gap-2"
-              :class="activeTab === tab.id ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50/50' : 'text-surface-500 hover:text-surface-900 hover:bg-surface-50'"
-              @click="activeTab = tab.id"
-            >
-              <span>{{ tab.icon }}</span>
-              <span class="hidden sm:inline">{{ tab.label }}</span>
-            </button>
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <Transition name="page" mode="out-in">
+          
+          <div v-if="activeTab === 'analytics'" key="analytics">
+             <AnalyticsDashboard :analytics="analytics" />
           </div>
 
-          <!-- Tab Content -->
-          <div class="p-4 sm:p-6">
-            <!-- Orders Tab -->
-            <div v-if="activeTab === 'orders'">
-              <OrdersManager
-                :orders="orders"
-                :is-loading="isLoadingOrders"
-                @refresh="loadOrders"
-                @select-order="handleOrderSelect"
-              />
-            </div>
-
-            <!-- Products Tab -->
-            <div v-if="activeTab === 'products'">
-              <ProductsManager
-                :products="products"
-                :admin-token="adminToken"
-                @refresh="loadProducts"
-              />
-            </div>
-
-            <!-- Content Tab -->
-            <div v-if="activeTab === 'content'">
-              <ContentManager :admin-token="adminToken" />
-            </div>
-
-            <!-- Settings Tab -->
-            <div v-if="activeTab === 'settings'" class="text-center py-12">
-              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-100 flex items-center justify-center">
-                <svg class="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <h4 class="text-lg font-semibold text-surface-700 mb-2">Settings</h4>
-              <p class="text-surface-500">Admin settings coming soon...</p>
-            </div>
+          <div v-else-if="activeTab === 'orders'" key="orders">
+            <OrdersManager
+              :orders="orders"
+              :is-loading="isLoadingOrders"
+              @refresh="loadOrders"
+              @select-order="handleOrderSelect"
+            />
           </div>
-        </div>
-      </div>
+
+          <div v-else-if="activeTab === 'products'" key="products">
+            <ProductsManager
+              :products="products"
+              :admin-token="adminToken"
+              @refresh="loadProducts"
+            />
+          </div>
+
+          <div v-else-if="activeTab === 'content'" key="content">
+            <ContentManager :admin-token="adminToken" />
+          </div>
+
+          <div v-else-if="activeTab === 'settings'" key="settings" class="settings-placeholder">
+            <div class="settings-placeholder__icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </div>
+            <h2 class="settings-placeholder__title">Settings</h2>
+            <p class="settings-placeholder__desc">Configure store settings, payments, and shipping options.</p>
+            <span class="settings-placeholder__badge">Coming Soon</span>
+          </div>
+
+        </Transition>
+        <!-- Hidden router-view for child route matching -->
+        <router-view v-show="false" />
+      </main>
     </div>
 
     <!-- Order Edit Modal -->
     <OrderEditModal
       :order="selectedOrder"
-      :admin-token="adminToken"
+      :is-open="!!selectedOrder"
       @close="closeOrderModal"
-      @updated="handleOrderUpdated"
+      @save="handleOrderSave"
+      @update-status="handleOrderStatusUpdate"
     />
   </div>
 </template>
+
+
+
+<style scoped>
+/* ============================================================
+   ADMIN DASHBOARD — Refined Dark Theme
+   ============================================================ */
+
+.admin-root {
+  min-height: 100vh;
+  background: #0c0d10;
+  color: #e4e5e9;
+  font-family: 'Inter', 'Outfit', system-ui, -apple-system, sans-serif;
+}
+
+/* ----- LOGIN SCREEN ----- */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.login-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: orbFloat 12s ease-in-out infinite alternate;
+}
+
+.login-orb--1 {
+  width: 300px;
+  height: 300px;
+  background: #10b981;
+  top: -60px;
+  right: -40px;
+  animation-delay: 0s;
+}
+
+.login-orb--2 {
+  width: 250px;
+  height: 250px;
+  background: #6366f1;
+  bottom: -60px;
+  left: -30px;
+  animation-delay: -4s;
+}
+
+.login-orb--3 {
+  width: 180px;
+  height: 180px;
+  background: #f59e0b;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: -8s;
+  opacity: 0.15;
+}
+
+.login-noise {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+@keyframes orbFloat {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(20px, -20px) scale(1.08); }
+}
+
+.login-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 400px;
+  background: rgba(18, 19, 24, 0.85);
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  animation: cardAppear 0.5s ease-out;
+}
+
+@keyframes cardAppear {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.login-logo {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-logo__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+}
+
+.login-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #f0f1f3;
+  margin: 0 0 0.25rem;
+}
+
+.login-subtitle {
+  font-size: 0.85rem;
+  color: #787992;
+  margin: 0;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.login-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.login-input-wrap {
+  position: relative;
+}
+
+.login-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  padding-right: 2.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #f0f1f3;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.login-input::placeholder {
+  color: #4b5563;
+}
+
+.login-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.login-eye {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  transition: color 0.2s;
+}
+
+.login-eye:hover {
+  color: #d1d5db;
+}
+
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  color: #f87171;
+  margin: 0;
+}
+
+.login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+}
+
+.login-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1px);
+}
+
+.login-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-btn__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.login-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  margin-top: 1.5rem;
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.login-back:hover {
+  color: #10b981;
+}
+
+
+/* ----- DASHBOARD LAYOUT ----- */
+.dashboard-layout {
+  min-height: 100vh;
+  padding-bottom: 5rem;
+  transition: padding-left 0.3s ease;
+}
+
+@media (min-width: 768px) {
+  .dashboard-layout {
+    padding-left: 72px;
+    padding-bottom: 0;
+  }
+}
+
+/* ----- SIDEBAR (Desktop) ----- */
+.sidebar {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 72px;
+  background: #111218;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 50;
+  flex-direction: column;
+  padding: 1.25rem 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    display: flex;
+  }
+}
+
+.sidebar--expanded {
+  width: 200px;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1.25rem;
+  margin-bottom: 1.75rem;
+  white-space: nowrap;
+}
+
+.sidebar__logo-icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.sidebar__logo-text {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #f0f1f3;
+}
+
+.sidebar__nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 0.75rem;
+}
+
+.sidebar__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.65rem;
+  border-radius: 10px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.sidebar__item:hover {
+  color: #d1d5db;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar__item--active {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.sidebar__item--active:hover {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.sidebar__indicator {
+  position: absolute;
+  left: -0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: #10b981;
+  border-radius: 0 4px 4px 0;
+}
+
+.sidebar__icon {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar__label {
+  font-family: 'Inter', sans-serif;
+}
+
+.sidebar__footer {
+  padding: 0 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.sidebar__item--logout:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+
+/* ----- MOBILE BOTTOM NAV ----- */
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  background: rgba(17, 18, 24, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 768px) {
+  .mobile-nav {
+    display: none;
+  }
+}
+
+.mobile-nav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.65rem 0;
+  background: none;
+  border: none;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-nav__item--active {
+  color: #10b981;
+}
+
+.mobile-nav__icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.mobile-nav__item--active .mobile-nav__icon {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.mobile-nav__label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+
+/* ----- TOP BAR ----- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: rgba(12, 13, 16, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@media (min-width: 768px) {
+  .topbar {
+    padding: 1.25rem 2rem;
+  }
+}
+
+.topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topbar__mobile-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+@media (min-width: 768px) {
+  .topbar__mobile-logo {
+    display: none;
+  }
+}
+
+.topbar__title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #f0f1f3;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.topbar__subtitle {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0.125rem 0 0;
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .topbar__subtitle {
+    display: block;
+  }
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.topbar__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.topbar__btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+}
+
+.topbar__btn--logout:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.15);
+}
+
+
+/* ----- MAIN CONTENT ----- */
+.main-content {
+  padding: 1.25rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    padding: 1.75rem 2rem;
+  }
+}
+
+
+/* ----- PAGE TRANSITION ----- */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+
+/* ----- SETTINGS PLACEHOLDER ----- */
+.settings-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 2rem;
+  text-align: center;
+  animation: fadeUp 0.5s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-placeholder__icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
+  margin-bottom: 1.5rem;
+}
+
+.settings-placeholder__title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: #f0f1f3;
+  margin: 0 0 0.5rem;
+}
+
+.settings-placeholder__desc {
+  font-size: 0.9rem;
+  color: #6b7280;
+  max-width: 320px;
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+
+.settings-placeholder__badge {
+  display: inline-flex;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+</style>

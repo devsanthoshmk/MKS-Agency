@@ -1,6 +1,8 @@
 <script setup>
-import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
-import { ConvexClient } from 'convex/browser'
+import { ref, computed, defineProps, defineEmits, onMounted, watch } from 'vue'
+import ProductEditModal from './ProductEditModal.vue'
+import { useUI } from '../../composables/useUI'
+import { ConvexHttpClient } from 'convex/browser'
 import { api } from '../../../convex/_generated/api.js'
 
 // API URL for production/development
@@ -14,6 +16,9 @@ const props = defineProps({
 
 const emit = defineEmits(['refresh'])
 
+// Product preview via customer-facing modal
+const { openModal: openUIModal } = useUI()
+
 const editingProduct = ref(null)
 const isCreatingProduct = ref(false)
 const isSaving = ref(false)
@@ -23,25 +28,42 @@ const searchQuery = ref('')
 const categoryFilter = ref('all')
 const isUploading = ref(false)
 const uploadProgress = ref(0)
-const isDragging = ref(false)
+
 
 // Initialize Convex client for file uploads AND product mutations
 let convexClient = null
 onMounted(() => {
   if (CONVEX_URL) {
-    convexClient = new ConvexClient(CONVEX_URL)
+    convexClient = new ConvexHttpClient(CONVEX_URL)
   }
 })
 
+// Categories & Tags
+const categories = computed(() => {
+  const cats = new Set(props.products.map(p => p.category).filter(Boolean))
+  return ['all', ...Array.from(cats).sort()]
+})
 
-const categories = computed(() => [...new Set(props.products.map(p => p.category).filter(Boolean))].sort())
+const allTags = computed(() => {
+  const tags = new Set()
+  props.products.forEach(p => {
+    if (p.tags) p.tags.forEach(t => tags.add(t))
+  })
+  return Array.from(tags).sort()
+})
 
+// Filtered Products
 const filteredProducts = computed(() => {
   let result = props.products
-  if (categoryFilter.value !== 'all') result = result.filter(p => p.category === categoryFilter.value)
+  if (categoryFilter.value !== 'all') {
+    result = result.filter(p => p.category === categoryFilter.value)
+  }
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    result = result.filter(p => p.name?.toLowerCase().includes(query) || p.category?.toLowerCase().includes(query))
+    result = result.filter(p => 
+      p.name?.toLowerCase().includes(query) || 
+      p.category?.toLowerCase().includes(query)
+    )
   }
   return result
 })
@@ -55,14 +77,36 @@ function generateSlug(name) {
 }
 
 function createNewProduct() {
-  editingProduct.value = { id: 'prod_' + Date.now(), slug: '', name: '', description: '', shortDescription: '', price: 0, comparePrice: null, category: '', images: [], stock: 100, isActive: true, tags: [], benefits: [], ingredients: '', usage: '', weight: '' }
+  editingProduct.value = { 
+    id: 'prod_' + Date.now(), 
+    slug: '', 
+    name: '', 
+    description: '', 
+    shortDescription: '', 
+    price: 0, 
+    comparePrice: null, 
+    category: '', 
+    images: [], 
+    stock: 100, 
+    isActive: true, 
+    tags: [], 
+    benefits: [], 
+    ingredients: '', 
+    usage: '', 
+    weight: '' 
+  }
   isCreatingProduct.value = true
+  activeSection.value = 'basic'
   saveError.value = ''
   saveSuccess.value = ''
 }
 
 function editProduct(product) {
-  editingProduct.value = { ...product, images: [...(product.images || [])] }
+  editingProduct.value = { 
+    ...product, 
+    images: [...(product.images || [])],
+    tags: [...(product.tags || [])]
+  }
   isCreatingProduct.value = false
   saveError.value = ''
   saveSuccess.value = ''
@@ -71,6 +115,10 @@ function editProduct(product) {
 function cancelEdit() {
   editingProduct.value = null
   isCreatingProduct.value = false
+}
+
+function previewProduct(product) {
+  openUIModal('product', { ...product, _adminPreview: true })
 }
 
 async function saveProduct() {
@@ -86,59 +134,51 @@ async function saveProduct() {
     }
 
     const product = editingProduct.value
+    
+    // Prepare product data for Convex
+    const productData = {
+      productId: product.id || product.productId || 'prod_' + Date.now(),
+      slug: product.slug,
+      name: product.name,
+      description: product.description || undefined,
+      shortDescription: product.shortDescription || undefined,
+      price: Number(product.price),
+      comparePrice: product.comparePrice ? Number(product.comparePrice) : undefined,
+      category: product.category || undefined,
+      subcategory: product.subcategory || undefined,
+      images: product.images || undefined,
+      stock: Number(product.stock) || 0,
+      isActive: product.isActive !== false,
+      tags: product.tags?.length ? product.tags : undefined,
+      benefits: product.benefits?.length ? product.benefits : undefined,
+      ingredients: product.ingredients || undefined,
+      usage: product.usage || undefined,
+      weight: product.weight || undefined,
+      metaTitle: product.metaTitle || undefined,
+      metaDescription: product.metaDescription || undefined,
+    }
 
     if (isCreatingProduct.value) {
-      // Create new product via Convex mutation
-      await convexClient.mutation(api.mutations.createProduct, {
-        productId: product.id || 'prod_' + Date.now(),
-        slug: product.slug,
-        name: product.name,
-        description: product.description || undefined,
-        shortDescription: product.shortDescription || undefined,
-        price: Number(product.price),
-        comparePrice: product.comparePrice ? Number(product.comparePrice) : undefined,
-        category: product.category || undefined,
-        subcategory: product.subcategory || undefined,
-        images: product.images || undefined,
-        stock: Number(product.stock) || 0,
-        isActive: product.isActive !== false,
-        tags: product.tags?.length ? product.tags : undefined,
-        benefits: product.benefits?.length ? product.benefits : undefined,
-        ingredients: product.ingredients || undefined,
-        usage: product.usage || undefined,
-        weight: product.weight || undefined,
-        metaTitle: product.metaTitle || undefined,
-        metaDescription: product.metaDescription || undefined,
-      })
+      // Create
+      await convexClient.mutation(api.mutations.createProduct, productData)
     } else {
-      // Update existing product via Convex mutation
+      // Update
       await convexClient.mutation(api.mutations.updateProduct, {
-        _id: product._id,
-        productId: product.id || product.productId,
-        slug: product.slug,
-        name: product.name,
-        description: product.description || undefined,
-        shortDescription: product.shortDescription || undefined,
-        price: Number(product.price),
-        comparePrice: product.comparePrice ? Number(product.comparePrice) : undefined,
-        category: product.category || undefined,
-        subcategory: product.subcategory || undefined,
-        images: product.images || undefined,
-        stock: Number(product.stock) || 0,
-        isActive: product.isActive !== false,
-        tags: product.tags?.length ? product.tags : undefined,
-        benefits: product.benefits?.length ? product.benefits : undefined,
-        ingredients: product.ingredients || undefined,
-        usage: product.usage || undefined,
-        weight: product.weight || undefined,
-        metaTitle: product.metaTitle || undefined,
-        metaDescription: product.metaDescription || undefined,
+        ...productData,
+        _id: product._id
       })
     }
 
     saveSuccess.value = 'Product saved!'
     emit('refresh')
-    setTimeout(() => { editingProduct.value = null; isCreatingProduct.value = false }, 1000)
+    // Close modal after success
+    setTimeout(() => { 
+      // Only close if still on the same screen (user didn't cancel)
+      if (editingProduct.value) {
+        editingProduct.value = null; 
+        isCreatingProduct.value = false 
+      }
+    }, 1000)
   } catch (e) {
     console.error('Save product error:', e)
     saveError.value = e.message || 'Failed to save product'
@@ -147,20 +187,19 @@ async function saveProduct() {
   }
 }
 
-
 async function deleteProduct(productId) {
-  if (!confirm('Delete this product?')) return
-  isSaving.value = true
+  if (!confirm('Are you sure you want to delete this product?')) return
+  
+  // We need to find the product to get its _id for Convex
+  const product = props.products.find(p => p.id === productId || p.productId === productId)
+  if (!product || !product._id) {
+    alert('Product not found in database')
+    return
+  }
+
   try {
     if (!convexClient) {
-      saveError.value = 'Convex not configured.'
-      return
-    }
-
-    // Find the product to get its Convex _id
-    const product = props.products.find(p => p.id === productId || p.productId === productId)
-    if (!product || !product._id) {
-      saveError.value = 'Product not found in database'
+      alert('Convex not configured.')
       return
     }
 
@@ -170,56 +209,35 @@ async function deleteProduct(productId) {
     emit('refresh')
   } catch (e) {
     console.error('Delete product error:', e)
-    saveError.value = e.message || 'Failed to delete product'
-  } finally {
-    isSaving.value = false
+    alert('Failed to delete product: ' + e.message)
   }
 }
 
-
-// Image upload functions
+// Image Upload Logic
 async function uploadImage(file) {
   if (!file || !file.type.startsWith('image/')) {
     saveError.value = 'Please select a valid image file'
     return null
   }
-
-  // Check file size (max 5MB)
   if (file.size > 5 * 1024 * 1024) {
     saveError.value = 'Image size must be less than 5MB'
     return null
   }
-
   if (!convexClient) {
-    saveError.value = 'Convex not configured. Please check VITE_CONVEX_URL environment variable.'
+    saveError.value = 'Convex not configured.'
     return null
   }
 
   try {
-    // Step 1: Get a short-lived upload URL from Convex
     const uploadUrl = await convexClient.mutation(api.files.generateUploadUrl, {})
-    
-    // Step 2: POST the file to the upload URL
     const result = await fetch(uploadUrl, {
       method: 'POST',
       headers: { 'Content-Type': file.type },
       body: file,
     })
-    
-    if (!result.ok) {
-      throw new Error(`Upload failed with status ${result.status}`)
-    }
-    
+    if (!result.ok) throw new Error(`Upload failed: ${result.status}`)
     const { storageId } = await result.json()
-    
-    // Step 3: Get the public URL via Convex's storage.getUrl()
-    // This returns the correct CDN-backed URL for the uploaded file
     const publicUrl = await convexClient.query(api.files.getFileUrl, { storageId })
-    
-    if (!publicUrl) {
-      throw new Error('Failed to get public URL for uploaded file')
-    }
-    
     return publicUrl
   } catch (error) {
     console.error('Upload error:', error)
@@ -228,50 +246,8 @@ async function uploadImage(file) {
   }
 }
 
-async function handleFileUpload(event) {
-  const files = event.target.files
-  if (!files?.length || !editingProduct.value) return
-  
-  isUploading.value = true
-  uploadProgress.value = 0
-  saveError.value = ''
-  
-  const totalFiles = files.length
-  let uploadedCount = 0
-  
-  for (const file of files) {
-    const url = await uploadImage(file)
-    if (url) {
-      editingProduct.value.images = [...(editingProduct.value.images || []), url]
-    }
-    uploadedCount++
-    uploadProgress.value = Math.round((uploadedCount / totalFiles) * 100)
-  }
-  
-  isUploading.value = false
-  uploadProgress.value = 0
-  
-  // Clear file input
-  event.target.value = ''
-}
-
-function handleDragOver(event) {
-  event.preventDefault()
-  isDragging.value = true
-}
-
-function handleDragLeave(event) {
-  event.preventDefault()
-  isDragging.value = false
-}
-
-async function handleDrop(event) {
-  event.preventDefault()
-  isDragging.value = false
-  
-  const files = event.dataTransfer?.files
-  if (!files?.length || !editingProduct.value) return
-  
+async function processFiles(files) {
+  if (!editingProduct.value) return
   isUploading.value = true
   uploadProgress.value = 0
   saveError.value = ''
@@ -293,195 +269,493 @@ async function handleDrop(event) {
   isUploading.value = false
   uploadProgress.value = 0
 }
-
-function removeImage(index) {
-  if (!editingProduct.value) return
-  editingProduct.value.images = editingProduct.value.images.filter((_, i) => i !== index)
-}
-
-function moveImage(index, direction) {
-  if (!editingProduct.value || !editingProduct.value.images) return
-  const newIndex = index + direction
-  if (newIndex < 0 || newIndex >= editingProduct.value.images.length) return
-  
-  const images = [...editingProduct.value.images]
-  const [removed] = images.splice(index, 1)
-  images.splice(newIndex, 0, removed)
-  editingProduct.value.images = images
-}
 </script>
 
 <template>
-  <div class="products-manager">
-    <div class="flex flex-col sm:flex-row gap-3 mb-4">
-      <div class="relative flex-1">
-        <input v-model="searchQuery" type="text" placeholder="Search products..." class="input w-full pl-10" />
-        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+  <div class="products-mgr">
+    <!-- Toolbar -->
+    <div class="prod-toolbar">
+      <div class="prod-search">
+        <svg class="prod-search__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input v-model="searchQuery" type="text" placeholder="Search products..." class="prod-search__input" />
       </div>
-      <select v-model="categoryFilter" class="input w-full sm:w-48">
-        <option value="all">All Categories</option>
-        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-      </select>
-      <button class="btn btn-primary" @click="createNewProduct">+ Add Product</button>
+      <div class="prod-toolbar__actions">
+        <select v-model="categoryFilter" class="prod-select">
+          <option v-for="cat in categories" :key="cat" :value="cat">{{ cat === 'all' ? 'All Categories' : cat }}</option>
+        </select>
+        <button class="prod-add-btn" @click="createNewProduct">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span class="prod-add-btn__text">Add Product</span>
+        </button>
+      </div>
     </div>
 
-    <p class="text-sm text-surface-500 mb-4">Showing {{ filteredProducts.length }} of {{ products.length }} products</p>
+    <!-- Stats -->
+    <p class="prod-count">Showing {{ filteredProducts.length }} of {{ products.length }} products</p>
 
-    <div class="grid gap-4">
-      <div v-for="product in filteredProducts" :key="product.id" class="flex items-center gap-4 p-4 bg-surface-50 rounded-xl">
-        <div class="w-20 h-20 rounded-lg overflow-hidden bg-surface-200 shrink-0">
-          <img v-if="product.images?.[0]" :src="product.images[0]" :alt="product.name" class="w-full h-full object-cover" />
-        </div>
-        <div class="flex-1 min-w-0">
-          <h4 class="font-medium text-surface-900">{{ product.name }}</h4>
-          <p class="text-sm text-surface-500">{{ product.category }}</p>
-          <div class="flex items-center gap-3 mt-1">
-            <span class="font-bold text-primary-700">{{ formatPrice(product.price) }}</span>
-            <span :class="product.stock > 0 ? 'text-green-600' : 'text-red-500'" class="text-xs">{{ product.stock > 0 ? `${product.stock} in stock` : 'Out of stock' }}</span>
+    <!-- Product Grid -->
+    <div class="prod-grid">
+      <div
+        v-for="product in filteredProducts"
+        :key="product.id"
+        class="prod-card"
+      >
+        <!-- Image -->
+        <div class="prod-card__img" @click="previewProduct(product)" style="cursor: pointer;">
+          <img v-if="product.images?.[0]" :src="product.images[0]" :alt="product.name" />
+          <div v-else class="prod-card__no-img">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           </div>
-        </div>
-        <div class="flex gap-2">
-          <button class="px-4 py-2 text-sm bg-white border rounded-lg hover:bg-surface-50" @click="editProduct(product)">Edit</button>
-          <button class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg" @click="deleteProduct(product.id)" :disabled="isSaving">Delete</button>
-        </div>
-      </div>
-      <div v-if="filteredProducts.length === 0" class="text-center py-12 text-surface-500">No products found</div>
-    </div>
 
-    <div v-if="editingProduct" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="fixed inset-0 bg-black/50" @click="cancelEdit" />
-      <div class="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-        <h3 class="text-lg font-bold mb-4">{{ isCreatingProduct ? 'Create Product' : 'Edit Product' }}</h3>
-        <div v-if="saveSuccess" class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">{{ saveSuccess }}</div>
-        <div v-if="saveError" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">{{ saveError }}</div>
-        <div class="grid gap-4 mb-6">
-          <div class="grid sm:grid-cols-2 gap-4">
-            <div><label class="text-sm font-medium text-surface-700">Name *</label><input v-model="editingProduct.name" type="text" class="input mt-1" @input="editingProduct.slug = generateSlug(editingProduct.name)" /></div>
-            <div><label class="text-sm font-medium text-surface-700">Slug</label><input v-model="editingProduct.slug" type="text" class="input mt-1" /></div>
+          <!-- Preview overlay -->
+          <div class="prod-card__preview-overlay">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Preview</span>
           </div>
-          <div><label class="text-sm font-medium text-surface-700">Short Description</label><input v-model="editingProduct.shortDescription" type="text" class="input mt-1" /></div>
-          <div><label class="text-sm font-medium text-surface-700">Full Description</label><textarea v-model="editingProduct.description" rows="3" class="input mt-1 resize-none" /></div>
-          <div class="grid sm:grid-cols-3 gap-4">
-            <div><label class="text-sm font-medium text-surface-700">Price *</label><input v-model.number="editingProduct.price" type="number" class="input mt-1" /></div>
-            <div><label class="text-sm font-medium text-surface-700">Compare Price</label><input v-model.number="editingProduct.comparePrice" type="number" class="input mt-1" /></div>
-            <div><label class="text-sm font-medium text-surface-700">Stock</label><input v-model.number="editingProduct.stock" type="number" class="input mt-1" /></div>
+
+          <!-- Badges -->
+          <div class="prod-card__badges">
+            <span :class="['prod-badge', product.stock > 0 ? 'prod-badge--stock' : 'prod-badge--oos']">
+              {{ product.stock > 0 ? `${product.stock} in stock` : 'Out of stock' }}
+            </span>
+            <span v-if="!product.isActive" class="prod-badge prod-badge--draft">Draft</span>
           </div>
-          <div class="grid sm:grid-cols-2 gap-4">
-            <div><label class="text-sm font-medium text-surface-700">Category</label><input v-model="editingProduct.category" type="text" class="input mt-1" /></div>
-            <div><label class="text-sm font-medium text-surface-700">Weight/Size</label><input v-model="editingProduct.weight" type="text" class="input mt-1" /></div>
-          </div>
-          
-          <!-- Image Upload Section -->
-          <div>
-            <label class="text-sm font-medium text-surface-700 block mb-2">Product Images</label>
-            
-            <!-- Drag & Drop Upload Area -->
-            <div 
-              class="relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200"
-              :class="[
-                isDragging ? 'border-primary-500 bg-primary-50' : 'border-surface-300 hover:border-surface-400',
-                isUploading ? 'opacity-50 pointer-events-none' : ''
-              ]"
-              @dragover="handleDragOver"
-              @dragleave="handleDragLeave"
-              @drop="handleDrop"
-            >
-              <input 
-                type="file" 
-                accept="image/*" 
-                multiple 
-                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                @change="handleFileUpload"
-                :disabled="isUploading"
-              />
-              
-              <div v-if="isUploading" class="flex flex-col items-center">
-                <svg class="w-8 h-8 text-primary-500 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p class="mt-2 text-sm text-surface-600">Uploading... {{ uploadProgress }}%</p>
-              </div>
-              
-              <div v-else class="flex flex-col items-center">
-                <svg class="w-10 h-10 text-surface-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <p class="text-sm text-surface-600">
-                  <span class="text-primary-600 font-medium">Click to upload</span> or drag and drop
-                </p>
-                <p class="text-xs text-surface-400 mt-1">PNG, JPG, GIF up to 5MB</p>
-              </div>
+        </div>
+
+        <!-- Content -->
+        <div class="prod-card__body">
+          <span class="prod-card__category">{{ product.category }}</span>
+          <h4 class="prod-card__name" :title="product.name">{{ product.name }}</h4>
+
+          <div class="prod-card__footer">
+            <div class="prod-card__pricing">
+              <span class="prod-card__price">{{ formatPrice(product.price) }}</span>
+              <span v-if="product.comparePrice" class="prod-card__compare">{{ formatPrice(product.comparePrice) }}</span>
             </div>
-            
-            <!-- Image Previews -->
-            <div v-if="editingProduct.images?.length" class="mt-4 grid grid-cols-4 gap-3">
-              <div 
-                v-for="(image, index) in editingProduct.images" 
-                :key="index" 
-                class="relative group aspect-square rounded-lg overflow-hidden bg-surface-100"
-              >
-                <img :src="image" :alt="`Product image ${index + 1}`" class="w-full h-full object-cover" />
-                
-                <!-- Image badges & controls -->
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                  <!-- Move left -->
-                  <button 
-                    v-if="index > 0"
-                    @click.stop="moveImage(index, -1)" 
-                    class="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors"
-                    title="Move left"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  
-                  <!-- Move right -->
-                  <button 
-                    v-if="index < editingProduct.images.length - 1"
-                    @click.stop="moveImage(index, 1)" 
-                    class="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors"
-                    title="Move right"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                  
-                  <!-- Delete -->
-                  <button 
-                    @click.stop="removeImage(index)" 
-                    class="p-1.5 bg-red-500/90 text-white rounded-lg hover:bg-red-500 transition-colors"
-                    title="Remove image"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-                
-                <!-- Primary badge -->
-                <span v-if="index === 0" class="absolute top-1 left-1 px-1.5 py-0.5 bg-primary-500 text-white text-[10px] font-medium rounded">
-                  Primary
-                </span>
-              </div>
+            <div class="prod-card__actions">
+              <button class="prod-icon-btn prod-icon-btn--preview" @click="previewProduct(product)" title="Preview as customer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="prod-icon-btn" @click="editProduct(product)" title="Edit">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="prod-icon-btn prod-icon-btn--danger" @click="deleteProduct(product.id || product.productId)" :disabled="isSaving" title="Delete">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </button>
             </div>
-            
-            <p v-if="editingProduct.images?.length" class="text-xs text-surface-400 mt-2">
-              Drag images to reorder. First image will be the primary product image.
-            </p>
           </div>
-          
-          <div><label class="text-sm font-medium text-surface-700">Usage</label><textarea v-model="editingProduct.usage" rows="2" class="input mt-1 resize-none" /></div>
-          <div><label class="text-sm font-medium text-surface-700">Ingredients</label><input v-model="editingProduct.ingredients" type="text" class="input mt-1" /></div>
-          <div class="flex items-center gap-2"><input v-model="editingProduct.isActive" type="checkbox" id="isActive" class="w-4 h-4" /><label for="isActive" class="text-sm">Active</label></div>
-        </div>
-        <div class="flex gap-3">
-          <button class="flex-1 btn btn-primary" :disabled="isSaving || isUploading" @click="saveProduct">{{ isSaving ? 'Saving...' : 'Save' }}</button>
-          <button class="btn btn-secondary" @click="cancelEdit">Cancel</button>
         </div>
       </div>
+      
+      <!-- Empty State -->
+      <div v-if="filteredProducts.length === 0" class="prod-empty">
+        <div class="prod-empty__icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        </div>
+        <p class="prod-empty__text">No products found</p>
+        <button class="prod-empty__clear" @click="categoryFilter = 'all'; searchQuery = ''">Clear filters</button>
+      </div>
     </div>
+
+    <!-- Product Edit/Create Modal -->
+    <ProductEditModal
+      v-model="editingProduct"
+      :is-creating="isCreatingProduct"
+      :is-saving="isSaving"
+      :is-uploading="isUploading"
+      :upload-progress="uploadProgress"
+      :save-error="saveError"
+      :save-success="saveSuccess"
+      :categories="categories"
+      :tags="allTags"
+      @save="saveProduct"
+      @cancel="cancelEdit"
+      @upload-images="processFiles"
+    />
   </div>
 </template>
+
+<style scoped>
+.products-mgr {
+  animation: fadeUp 0.4s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ----- TOOLBAR ----- */
+.prod-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+  .prod-toolbar {
+    flex-direction: row;
+    align-items: center;
+    padding: 0.75rem 1rem;
+  }
+}
+
+.prod-search {
+  position: relative;
+  flex: 1;
+}
+
+.prod-search__icon {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4b5563;
+  pointer-events: none;
+}
+
+.prod-search__input {
+  width: 100%;
+  padding: 0.65rem 0.875rem 0.65rem 2.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.prod-search__input::placeholder { color: #4b5563; }
+.prod-search__input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.12);
+}
+
+.prod-toolbar__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.prod-select {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .prod-select { width: 180px; flex: none; }
+}
+
+.prod-select option {
+  background: #1a1b22;
+  color: #e5e7eb;
+}
+
+.prod-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.prod-add-btn:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
+.prod-add-btn:active {
+  transform: scale(0.97);
+}
+
+.prod-add-btn__text {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .prod-add-btn__text { display: inline; }
+}
+
+/* ----- COUNT ----- */
+.prod-count {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0 0 0.75rem 0.25rem;
+}
+
+/* ----- PRODUCT GRID ----- */
+.prod-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 640px) { .prod-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .prod-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1280px) { .prod-grid { grid-template-columns: repeat(4, 1fr); } }
+
+@media (min-width: 768px) {
+  .prod-grid { padding-bottom: 0; }
+}
+
+.prod-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s ease;
+}
+
+.prod-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.prod-card__img {
+  position: relative;
+  aspect-ratio: 4/3;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.prod-card__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.prod-card:hover .prod-card__img img {
+  transform: scale(1.05);
+}
+
+.prod-card__no-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #374151;
+}
+
+.prod-card__badges {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-end;
+}
+
+.prod-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(8px);
+}
+
+.prod-badge--stock {
+  background: rgba(16, 185, 129, 0.85);
+  color: white;
+}
+
+.prod-badge--oos {
+  background: rgba(239, 68, 68, 0.85);
+  color: white;
+}
+
+.prod-badge--draft {
+  background: rgba(107, 114, 128, 0.85);
+  color: white;
+}
+
+.prod-card__body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.prod-card__category {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.25rem;
+}
+
+.prod-card__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #f0f1f3;
+  margin: 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.prod-card__footer {
+  margin-top: auto;
+  padding-top: 0.875rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prod-card__pricing {
+  display: flex;
+  flex-direction: column;
+}
+
+.prod-card__price {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #10b981;
+}
+
+.prod-card__compare {
+  font-size: 0.75rem;
+  color: #4b5563;
+  text-decoration: line-through;
+}
+
+.prod-card__actions {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.prod-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.prod-icon-btn:hover {
+  background: rgba(16, 185, 129, 0.08);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.prod-icon-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.prod-icon-btn--preview:hover {
+  background: rgba(99, 102, 241, 0.08);
+  color: #818cf8;
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* Preview overlay on image hover */
+.prod-card__preview-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.prod-card__img:hover .prod-card__preview-overlay {
+  opacity: 1;
+}
+
+/* ----- EMPTY STATE ----- */
+.prod-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rem 2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.prod-empty__icon {
+  color: #374151;
+  margin-bottom: 1rem;
+}
+
+.prod-empty__text {
+  font-size: 1rem;
+  color: #9ca3af;
+  margin: 0 0 0.75rem;
+}
+
+.prod-empty__clear {
+  background: none;
+  border: none;
+  color: #10b981;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.prod-empty__clear:hover {
+  color: #34d399;
+}
+
+
+</style>

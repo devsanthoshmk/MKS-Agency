@@ -1,527 +1,752 @@
 <script setup>
-import { ref, computed, watch, defineProps, defineEmits } from 'vue'
-
-// API URL for production/development
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+import { ref, watch, defineProps, defineEmits } from 'vue'
 
 const props = defineProps({
-  order: {
-    type: Object,
-    default: null
-  },
-  adminToken: {
-    type: String,
-    required: true
-  }
+  order: { type: Object, default: null },
+  show: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['close', 'updated'])
+const emit = defineEmits(['close', 'save'])
 
-// Loading states
-const isUpdating = ref(false)
-const updateError = ref('')
-const updateSuccess = ref('')
-
-// Active tab in modal
+const localOrder = ref(null)
 const activeTab = ref('details')
+const isSaving = ref(false)
 
-// Editable order data
-const editableOrder = ref({})
-
-// Status options
 const statusOptions = [
-  { value: 'PENDING_VERIFICATION', label: 'Pending Verification', color: 'warning', icon: '⏳' },
-  { value: 'PAYMENT_VERIFIED', label: 'Payment Verified', color: 'success', icon: '✓' },
-  { value: 'PROCESSING', label: 'Processing', color: 'info', icon: '⚙️' },
-  { value: 'SHIPPED', label: 'Shipped', color: 'primary', icon: '📦' },
-  { value: 'DELIVERED', label: 'Delivered', color: 'success', icon: '✅' },
-  { value: 'CANCELLED', label: 'Cancelled', color: 'error', icon: '❌' },
-  { value: 'FAILED', label: 'Failed', color: 'error', icon: '⚠️' }
+  { value: 'PENDING_VERIFICATION', label: 'Pending Verification', color: '#f59e0b' },
+  { value: 'PAYMENT_VERIFIED', label: 'Payment Verified', color: '#10b981' },
+  { value: 'PROCESSING', label: 'Processing', color: '#3b82f6' },
+  { value: 'SHIPPED', label: 'Shipped', color: '#8b5cf6' },
+  { value: 'DELIVERED', label: 'Delivered', color: '#22c55e' },
+  { value: 'CANCELLED', label: 'Cancelled', color: '#ef4444' },
+  { value: 'FAILED', label: 'Failed', color: '#ef4444' }
 ]
 
-// Watch for order changes and initialize editable data
+const tabs = [
+  { key: 'details', label: 'Details', icon: 'info' },
+  { key: 'items', label: 'Items', icon: 'package' },
+  { key: 'shipping', label: 'Shipping', icon: 'truck' }
+]
+
 watch(() => props.order, (newOrder) => {
   if (newOrder) {
-    editableOrder.value = {
-      ...newOrder,
-      newStatus: newOrder.status,
-      trackingUrl: newOrder.trackingUrl || '',
-      trackingNumber: newOrder.trackingNumber || '',
-      courierName: newOrder.courierName || '',
-      adminNotes: newOrder.adminNotes || '',
-      note: '',
-      // Editable shipping info
-      shippingName: newOrder.shippingName || '',
-      shippingPhone: newOrder.shippingPhone || '',
-      shippingEmail: newOrder.shippingEmail || '',
-      shippingAddress: newOrder.shippingAddress || '',
-      shippingCity: newOrder.shippingCity || '',
-      shippingState: newOrder.shippingState || '',
-      shippingPostal: newOrder.shippingPostal || '',
-      cancellationReason: newOrder.cancellationReason || '',
-      failureReason: newOrder.failureReason || '',
-    }
-    updateError.value = ''
-    updateSuccess.value = ''
+    localOrder.value = JSON.parse(JSON.stringify(newOrder))
     activeTab.value = 'details'
   }
 }, { immediate: true })
 
-// Computed: Has status changed
-const hasStatusChanged = computed(() => {
-  return editableOrder.value.newStatus !== props.order?.status
-})
-
-// Computed: Is shipping form changed
-const hasShippingChanged = computed(() => {
-  if (!props.order) return false
-  return (
-    editableOrder.value.shippingName !== props.order.shippingName ||
-    editableOrder.value.shippingPhone !== props.order.shippingPhone ||
-    editableOrder.value.shippingEmail !== props.order.shippingEmail ||
-    editableOrder.value.shippingAddress !== props.order.shippingAddress ||
-    editableOrder.value.shippingCity !== props.order.shippingCity ||
-    editableOrder.value.shippingState !== props.order.shippingState ||
-    editableOrder.value.shippingPostal !== props.order.shippingPostal
-  )
-})
-
-// Computed: Show tracking fields
-const showTrackingFields = computed(() => {
-  return ['SHIPPED', 'DELIVERED'].includes(editableOrder.value.newStatus)
-})
-
-// Computed: Show cancellation reason
-const showCancellationReason = computed(() => {
-  return editableOrder.value.newStatus === 'CANCELLED'
-})
-
-// Computed: Show failure reason
-const showFailureReason = computed(() => {
-  return editableOrder.value.newStatus === 'FAILED'
-})
-
 function formatPrice(price) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0
-  }).format(price)
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(price || 0)
 }
 
 function formatDate(dateString) {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
   })
 }
 
 function getStatusColor(status) {
-  const opt = statusOptions.find(s => s.value === status)
-  if (!opt) return 'bg-surface-100 text-surface-700'
-  switch (opt.color) {
-    case 'success': return 'bg-green-100 text-green-700 border-green-200'
-    case 'warning': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
-    case 'error': return 'bg-red-100 text-red-700 border-red-200'
-    case 'info': return 'bg-blue-100 text-blue-700 border-blue-200'
-    case 'primary': return 'bg-primary-100 text-primary-700 border-primary-200'
-    default: return 'bg-surface-100 text-surface-700 border-surface-200'
-  }
+  return statusOptions.find(s => s.value === status)?.color || '#6b7280'
 }
 
-async function updateOrderStatus() {
-  if (!editableOrder.value.newStatus) return
-
-  isUpdating.value = true
-  updateError.value = ''
-  updateSuccess.value = ''
-
+async function saveChanges() {
+  if (!localOrder.value) return
+  isSaving.value = true
   try {
-    // Get the order ID - it could be _id (Convex) or id
-    const orderId = props.order._id || props.order.id
-    
-    const response = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${props.adminToken}`
-      },
-      body: JSON.stringify({
-        status: editableOrder.value.newStatus,
-        trackingUrl: editableOrder.value.trackingUrl || undefined,
-        trackingNumber: editableOrder.value.trackingNumber || undefined,
-        courierName: editableOrder.value.courierName || undefined,
-        note: editableOrder.value.note || undefined,
-        adminNotes: editableOrder.value.adminNotes || undefined,
-        cancellationReason: editableOrder.value.cancellationReason || undefined,
-        failureReason: editableOrder.value.failureReason || undefined,
-      })
-    })
-
-    const data = await response.json()
-
-    if (response.ok && data.success) {
-      updateSuccess.value = 'Order updated successfully!'
-      emit('updated')
-      // Close after short delay to show success
-      setTimeout(() => {
-        emit('close')
-      }, 1000)
-    } else {
-      updateError.value = data.error || 'Failed to update order'
-    }
-  } catch (e) {
-    console.error('Order update error:', e)
-    updateError.value = 'Network error. Please try again.'
+    emit('save', localOrder.value)
   } finally {
-    isUpdating.value = false
+    isSaving.value = false
   }
-}
-
-function close() {
-  emit('close')
 }
 </script>
 
 <template>
-  <div v-if="order" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <!-- Backdrop -->
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="close" />
+  <Transition name="modal">
+    <div v-if="show && localOrder" class="modal-overlay">
+      <div class="modal-backdrop" @click="emit('close')"></div>
 
-    <!-- Modal -->
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-      <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b border-surface-200">
-        <div>
-          <h3 class="text-xl font-bold text-surface-900">Order {{ order.orderNumber }}</h3>
-          <p class="text-sm text-surface-500">Placed on {{ formatDate(order.createdAt) }}</p>
-        </div>
-        <button
-          @click="close"
-          class="p-2 hover:bg-surface-100 rounded-full transition-colors"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Tabs -->
-      <div class="flex border-b border-surface-200">
-        <button
-          v-for="tab in ['details', 'items', 'status', 'history']"
-          :key="tab"
-          class="flex-1 py-3 text-center font-medium capitalize transition-colors"
-          :class="activeTab === tab ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50/50' : 'text-surface-500 hover:text-surface-900'"
-          @click="activeTab = tab"
-        >
-          {{ tab }}
-        </button>
-      </div>
-
-      <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-6">
-        <!-- Success/Error Messages -->
-        <div v-if="updateSuccess" class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center gap-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          {{ updateSuccess }}
-        </div>
-        <div v-if="updateError" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg flex items-center gap-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {{ updateError }}
-        </div>
-
-        <!-- Details Tab -->
-        <div v-if="activeTab === 'details'" class="space-y-6">
-          <!-- Current Status -->
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-surface-500">Current Status:</span>
-            <span :class="['px-3 py-1 rounded-full text-sm font-medium border', getStatusColor(order.status)]">
-              {{ order.status?.replace(/_/g, ' ') }}
-            </span>
-          </div>
-
-          <!-- Order Summary -->
-          <div class="bg-surface-50 rounded-xl p-4">
-            <h4 class="font-semibold text-surface-900 mb-3">Order Summary</h4>
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span class="text-surface-500">Subtotal:</span>
-                <span class="ml-2 font-medium">{{ formatPrice(order.subtotal) }}</span>
-              </div>
-              <div>
-                <span class="text-surface-500">Shipping:</span>
-                <span class="ml-2 font-medium">{{ formatPrice(order.shippingFee) }}</span>
-              </div>
-              <div v-if="order.discount" class="col-span-2">
-                <span class="text-surface-500">Discount:</span>
-                <span class="ml-2 font-medium text-green-600">-{{ formatPrice(order.discount) }}</span>
-              </div>
-              <div class="col-span-2 pt-2 border-t border-surface-200">
-                <span class="text-surface-900 font-semibold">Total:</span>
-                <span class="ml-2 text-lg font-bold text-primary-700">{{ formatPrice(order.total) }}</span>
-              </div>
+      <div class="modal">
+        <!-- Header -->
+        <div class="modal__header">
+          <div class="modal__header-left">
+            <div class="modal__order-badge">
+              <span class="modal__order-hash">#</span>{{ localOrder.orderNumber }}
             </div>
+            <span class="modal__total">{{ formatPrice(localOrder.total) }}</span>
           </div>
-
-          <!-- Customer Info -->
-          <div class="bg-surface-50 rounded-xl p-4">
-            <h4 class="font-semibold text-surface-900 mb-3">Customer Information</h4>
-            <div class="space-y-3">
-              <div>
-                <label class="text-xs text-surface-500 block mb-1">Name</label>
-                <input v-model="editableOrder.shippingName" type="text" class="input" />
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="text-xs text-surface-500 block mb-1">Phone</label>
-                  <input v-model="editableOrder.shippingPhone" type="tel" class="input" />
-                </div>
-                <div>
-                  <label class="text-xs text-surface-500 block mb-1">Email</label>
-                  <input v-model="editableOrder.shippingEmail" type="email" class="input" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Shipping Address -->
-          <div class="bg-surface-50 rounded-xl p-4">
-            <h4 class="font-semibold text-surface-900 mb-3">Shipping Address</h4>
-            <div class="space-y-3">
-              <div>
-                <label class="text-xs text-surface-500 block mb-1">Street Address</label>
-                <textarea v-model="editableOrder.shippingAddress" rows="2" class="input resize-none" />
-              </div>
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div>
-                  <label class="text-xs text-surface-500 block mb-1">City</label>
-                  <input v-model="editableOrder.shippingCity" type="text" class="input" />
-                </div>
-                <div>
-                  <label class="text-xs text-surface-500 block mb-1">State</label>
-                  <input v-model="editableOrder.shippingState" type="text" class="input" />
-                </div>
-                <div>
-                  <label class="text-xs text-surface-500 block mb-1">Postal Code</label>
-                  <input v-model="editableOrder.shippingPostal" type="text" class="input" />
-                </div>
-              </div>
-            </div>
-          </div>
+          <button @click="emit('close')" class="modal__close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
 
-        <!-- Items Tab -->
-        <div v-if="activeTab === 'items'" class="space-y-4">
-          <h4 class="font-semibold text-surface-900">Order Items</h4>
-          <div
-            v-for="(item, index) in order.items"
-            :key="index"
-            class="flex items-center gap-4 p-3 bg-surface-50 rounded-xl"
+        <!-- Tabs -->
+        <div class="modal__tabs">
+          <button
+            v-for="tab in tabs"
+            :key="tab.key"
+            :class="['modal__tab', { 'modal__tab--active': activeTab === tab.key }]"
+            @click="activeTab = tab.key"
           >
-            <div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-200 shrink-0">
-              <img
-                v-if="item.productImage"
-                :src="item.productImage"
-                :alt="item.productName"
-                class="w-full h-full object-cover"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center text-surface-400">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-            <div class="flex-1 min-w-0">
-              <h5 class="font-medium text-surface-900 line-clamp-1">{{ item.productName }}</h5>
-              <p class="text-sm text-surface-500">Qty: {{ item.quantity }}</p>
-            </div>
-            <div class="text-right">
-              <p class="font-medium text-surface-900">{{ formatPrice(item.productPrice) }}</p>
-              <p class="text-sm text-surface-500">{{ formatPrice(item.productPrice * item.quantity) }}</p>
-            </div>
-          </div>
-
-          <div v-if="!order.items?.length" class="text-center py-8 text-surface-500">
-            No items found
-          </div>
-        </div>
-
-        <!-- Status Tab -->
-        <div v-if="activeTab === 'status'" class="space-y-6">
-          <!-- Status Update -->
-          <div>
-            <label class="block text-sm font-medium text-surface-700 mb-2">Update Status</label>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <button
-                v-for="opt in statusOptions"
-                :key="opt.value"
-                @click="editableOrder.newStatus = opt.value"
-                :class="[
-                  'p-3 rounded-lg border-2 text-center transition-all',
-                  editableOrder.newStatus === opt.value
-                    ? getStatusColor(opt.value) + ' border-current shadow-md'
-                    : 'border-surface-200 hover:border-surface-300'
-                ]"
-              >
-                <span class="text-lg block mb-1">{{ opt.icon }}</span>
-                <span class="text-xs font-medium">{{ opt.label }}</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Tracking Info (for shipped/delivered) -->
-          <div v-if="showTrackingFields" class="bg-blue-50 rounded-xl p-4 space-y-3">
-            <h4 class="font-semibold text-blue-900">Tracking Information</h4>
-            <div class="grid sm:grid-cols-2 gap-3">
-              <div>
-                <label class="text-xs text-blue-700 block mb-1">Courier Name</label>
-                <input
-                  v-model="editableOrder.courierName"
-                  type="text"
-                  class="input"
-                  placeholder="e.g., Blue Dart, DTDC"
-                />
-              </div>
-              <div>
-                <label class="text-xs text-blue-700 block mb-1">Tracking Number</label>
-                <input
-                  v-model="editableOrder.trackingNumber"
-                  type="text"
-                  class="input"
-                  placeholder="e.g., BD123456789IN"
-                />
-              </div>
-            </div>
-            <div>
-              <label class="text-xs text-blue-700 block mb-1">Tracking URL</label>
-              <input
-                v-model="editableOrder.trackingUrl"
-                type="url"
-                class="input"
-                placeholder="https://..."
-              />
-            </div>
-          </div>
-
-          <!-- Cancellation Reason -->
-          <div v-if="showCancellationReason" class="bg-red-50 rounded-xl p-4">
-            <label class="text-sm font-medium text-red-700 block mb-2">Cancellation Reason</label>
-            <textarea
-              v-model="editableOrder.cancellationReason"
-              rows="2"
-              class="input resize-none"
-              placeholder="Reason for cancellation..."
-            />
-          </div>
-
-          <!-- Failure Reason -->
-          <div v-if="showFailureReason" class="bg-red-50 rounded-xl p-4">
-            <label class="text-sm font-medium text-red-700 block mb-2">Failure Reason</label>
-            <textarea
-              v-model="editableOrder.failureReason"
-              rows="2"
-              class="input resize-none"
-              placeholder="Reason for failure..."
-            />
-          </div>
-
-          <!-- Status Note -->
-          <div>
-            <label class="text-sm font-medium text-surface-700 block mb-2">Status Note (optional)</label>
-            <textarea
-              v-model="editableOrder.note"
-              rows="2"
-              class="input resize-none"
-              placeholder="Add a note for this status update..."
-            />
-          </div>
-
-          <!-- Admin Notes -->
-          <div>
-            <label class="text-sm font-medium text-surface-700 block mb-2">Admin Notes (internal)</label>
-            <textarea
-              v-model="editableOrder.adminNotes"
-              rows="2"
-              class="input resize-none"
-              placeholder="Internal notes (not visible to customer)..."
-            />
-          </div>
-        </div>
-
-        <!-- History Tab -->
-        <div v-if="activeTab === 'history'" class="space-y-4">
-          <h4 class="font-semibold text-surface-900">Status History</h4>
-          
-          <div v-if="order.history?.length" class="relative">
-            <!-- Timeline line -->
-            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-surface-200" />
+            <!-- Info icon -->
+            <svg v-if="tab.icon === 'info'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <!-- Package icon -->
+            <svg v-else-if="tab.icon === 'package'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            <!-- Truck icon -->
+            <svg v-else-if="tab.icon === 'truck'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
             
-            <div
-              v-for="(entry, index) in order.history"
-              :key="index"
-              class="relative pl-10 pb-6 last:pb-0"
-            >
-              <!-- Timeline dot -->
-              <div :class="['absolute left-2 w-5 h-5 rounded-full border-2 bg-white', getStatusColor(entry.status)]" />
-              
-              <div class="bg-surface-50 rounded-lg p-3">
-                <div class="flex items-center justify-between mb-1">
-                  <span :class="['text-sm font-medium', getStatusColor(entry.status).split(' ')[1]]">
-                    {{ entry.status?.replace(/_/g, ' ') }}
-                  </span>
-                  <span class="text-xs text-surface-500">{{ formatDate(entry.createdAt) }}</span>
+            <span class="modal__tab-label">{{ tab.label }}</span>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal__body">
+
+          <!-- ---------- Details Tab ---------- -->
+          <div v-show="activeTab === 'details'" class="tab-content">
+            <!-- Status -->
+            <div class="detail-card">
+              <h4 class="detail-card__title">Order Status</h4>
+              <div class="status-select-wrap">
+                <span class="status-dot" :style="{ background: getStatusColor(localOrder.status) }"></span>
+                <select v-model="localOrder.status" class="status-select">
+                  <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Customer -->
+            <div class="detail-card">
+              <h4 class="detail-card__title">Customer</h4>
+              <div class="detail-rows">
+                <div class="detail-row">
+                  <span class="detail-row__label">Name</span>
+                  <span class="detail-row__value">{{ localOrder.shippingName }}</span>
                 </div>
-                <p v-if="entry.note" class="text-sm text-surface-600">{{ entry.note }}</p>
-                <p class="text-xs text-surface-400 mt-1">by {{ entry.changedBy || 'system' }}</p>
+                <div class="detail-row">
+                  <span class="detail-row__label">Email</span>
+                  <span class="detail-row__value">{{ localOrder.shippingEmail }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-row__label">Phone</span>
+                  <span class="detail-row__value">{{ localOrder.shippingPhone }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment -->
+            <div class="detail-card">
+              <h4 class="detail-card__title">Payment</h4>
+              <div class="detail-rows">
+                <div class="detail-row">
+                  <span class="detail-row__label">Method</span>
+                  <span class="detail-row__value">{{ localOrder.paymentMethod || 'UPI' }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-row__label">UTR / Ref</span>
+                  <span class="detail-row__value detail-row__value--mono">{{ localOrder.utrNumber || '-' }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-row__label">Created</span>
+                  <span class="detail-row__value">{{ formatDate(localOrder.createdAt) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="detail-card">
+              <h4 class="detail-card__title">Internal Notes</h4>
+              <textarea
+                v-model="localOrder.adminNotes"
+                class="notes-input"
+                rows="3"
+                placeholder="Add internal notes..."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- ---------- Items Tab ---------- -->
+          <div v-show="activeTab === 'items'" class="tab-content">
+            <div v-if="localOrder.items?.length" class="items-list">
+              <div v-for="(item, index) in localOrder.items" :key="index" class="item-card">
+                <div class="item-card__img">
+                  <img v-if="item.image" :src="item.image" :alt="item.name" />
+                  <div v-else class="item-card__no-img">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  </div>
+                </div>
+                <div class="item-card__info">
+                  <p class="item-card__name">{{ item.name }}</p>
+                  <p class="item-card__meta">Qty: {{ item.quantity }} × {{ formatPrice(item.price) }}</p>
+                </div>
+                <span class="item-card__total">{{ formatPrice(item.price * item.quantity) }}</span>
+              </div>
+            </div>
+            <div v-else class="items-empty">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              <p>No items in this order</p>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="order-summary">
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <span>{{ formatPrice(localOrder.subtotal || localOrder.total) }}</span>
+              </div>
+              <div v-if="localOrder.shippingFee" class="summary-row">
+                <span>Shipping</span>
+                <span>{{ formatPrice(localOrder.shippingFee) }}</span>
+              </div>
+              <div class="summary-row summary-row--total">
+                <span>Total</span>
+                <span>{{ formatPrice(localOrder.total) }}</span>
               </div>
             </div>
           </div>
 
-          <div v-else class="text-center py-8 text-surface-500">
-            <svg class="w-12 h-12 mx-auto mb-3 text-surface-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p>No status history available</p>
+          <!-- ---------- Shipping Tab ---------- -->
+          <div v-show="activeTab === 'shipping'" class="tab-content">
+            <div class="detail-card">
+              <h4 class="detail-card__title">Shipping Address</h4>
+              <div class="address-block">
+                <p class="address-block__name">{{ localOrder.shippingName }}</p>
+                <p>{{ localOrder.shippingAddress }}</p>
+                <p>{{ localOrder.shippingCity }}, {{ localOrder.shippingState }} {{ localOrder.shippingPincode }}</p>
+                <p v-if="localOrder.shippingPhone">📞 {{ localOrder.shippingPhone }}</p>
+              </div>
+            </div>
+
+            <div class="detail-card">
+              <h4 class="detail-card__title">Tracking</h4>
+              <div class="form-field-modal">
+                <label class="form-label-sm">Tracking Number</label>
+                <input v-model="localOrder.trackingNumber" type="text" class="form-input-modal" placeholder="Enter tracking number" />
+              </div>
+              <div class="form-field-modal">
+                <label class="form-label-sm">Courier Service</label>
+                <input v-model="localOrder.courierService" type="text" class="form-input-modal" placeholder="e.g. India Post, BlueDart" />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Footer -->
-      <div class="flex gap-3 p-6 border-t border-surface-200 bg-surface-50">
-        <button
-          class="flex-1 btn btn-primary btn-lg"
-          :disabled="isUpdating || (!hasStatusChanged && !hasShippingChanged)"
-          @click="updateOrderStatus"
-        >
-          <span v-if="isUpdating" class="flex items-center justify-center gap-2">
-            <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Updating...
-          </span>
-          <span v-else>Save Changes</span>
-        </button>
-        <button class="btn btn-secondary btn-lg" @click="close">Close</button>
+        <!-- Footer -->
+        <div class="modal__footer">
+          <button class="modal__save" :disabled="isSaving" @click="saveChanges">
+            <span v-if="isSaving" class="modal__save-spinner"></span>
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
+          <button class="modal__cancel" @click="emit('close')">Cancel</button>
+        </div>
       </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <style scoped>
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
+/* ----- Modal Transitions ----- */
+.modal-enter-active, .modal-leave-active {
+  transition: all 0.3s ease;
+}
+.modal-enter-from, .modal-leave-to {
+  opacity: 0;
+}
+.modal-enter-from .modal,
+.modal-leave-to .modal {
+  transform: translateY(20px);
+}
+
+/* ----- Overlay ----- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .modal-overlay {
+    align-items: center;
+    padding: 1.5rem;
+  }
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+/* ----- Modal ----- */
+.modal {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 92vh;
+  background: #111218;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px 20px 0 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .modal {
+    height: auto;
+    max-height: 85vh;
+    max-width: 560px;
+    border-radius: 20px;
+  }
+}
+
+/* ----- Header ----- */
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modal__header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.modal__order-badge {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #f0f1f3;
+}
+
+.modal__order-hash {
+  color: #4b5563;
+}
+
+.modal__total {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #10b981;
+  padding: 0.2rem 0.625rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 999px;
+}
+
+.modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+}
+
+/* ----- Tabs ----- */
+.modal__tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modal__tab {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.modal__tab:hover {
+  color: #d1d5db;
+}
+
+.modal__tab--active {
+  color: #10b981;
+  border-bottom-color: #10b981;
+}
+
+.modal__tab-label {
+  display: none;
+}
+
+@media (min-width: 400px) {
+  .modal__tab-label { display: inline; }
+}
+
+/* ----- Body ----- */
+.modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.tab-content {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Detail Cards */
+.detail-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.detail-card__title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.75rem;
+}
+
+.detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-row__label {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.detail-row__value {
+  font-weight: 600;
+  color: #e5e7eb;
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.detail-row__value--mono {
+  font-family: 'JetBrains Mono', monospace, monospace;
+  font-size: 0.8rem;
+}
+
+/* Status Select */
+.status-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.status-select {
+  flex: 1;
+  padding: 0.65rem 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+.status-select:focus {
+  border-color: #10b981;
+}
+
+.status-select option {
+  background: #1a1b22;
+  color: #e5e7eb;
+}
+
+/* Notes Input */
+.notes-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: #f0f1f3;
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.notes-input::placeholder { color: #374151; }
+.notes-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.12);
+}
+
+/* Items */
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.item-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.item-card__img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.item-card__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-card__no-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #374151;
+}
+
+.item-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-card__name {
+  font-weight: 600;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-card__meta {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0.125rem 0 0;
+}
+
+.item-card__total {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: #f0f1f3;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.items-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 2rem;
+  color: #4b5563;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.items-empty p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Order Summary */
+.order-summary {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.375rem 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.summary-row--total {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-weight: 700;
+  font-size: 1rem;
+  color: #f0f1f3;
+}
+
+/* Address */
+.address-block {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #d1d5db;
+}
+
+.address-block p {
+  margin: 0;
+}
+
+.address-block__name {
+  font-weight: 700;
+  color: #f0f1f3;
+  margin-bottom: 0.25rem !important;
+}
+
+/* Form */
+.form-field-modal {
+  margin-top: 0.75rem;
+}
+
+.form-label-sm {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.375rem;
+}
+
+.form-input-modal {
+  width: 100%;
+  padding: 0.65rem 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: #f0f1f3;
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.form-input-modal::placeholder { color: #374151; }
+.form-input-modal:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.12);
+}
+
+/* ----- Footer ----- */
+.modal__footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(17, 18, 24, 0.95);
+}
+
+.modal__save {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.modal__save:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+}
+
+.modal__save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal__save-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.modal__cancel {
+  padding: 0.875rem 1.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: #9ca3af;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal__cancel:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
 }
 </style>

@@ -40,7 +40,7 @@ const dismissMaintenancePopup = () => {
 }
 
 // Check if on admin page
-const isAdminPage = computed(() => route.name === 'admin')
+const isAdminPage = computed(() => route.path.startsWith('/admin'))
 
 // Load products on mount
 onMounted(async () => {

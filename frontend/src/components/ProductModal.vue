@@ -7,7 +7,7 @@ import { useWishlist } from '../composables/useWishlist'
 import { useProducts } from '../composables/useProducts'
 
 const router = useRouter()
-const { activeModal, modalData, closeModal } = useUI()
+const { activeModal, modalData, closeModal, closeModalWithoutNavigation } = useUI()
 const { addItem: addToCart, isInCart } = useCart()
 const { toggleItem, isInWishlist } = useWishlist()
 const { getRelatedProducts } = useProducts()
@@ -17,6 +17,9 @@ const selectedImageIndex = ref(0)
 
 const isOpen = computed(() => activeModal.value === 'product' && modalData.value)
 const product = computed(() => modalData.value)
+
+// Admin preview mode — when opened from ProductsManager
+const isAdminPreview = computed(() => !!product.value?._adminPreview)
 
 // Get the currently selected image
 const currentImage = computed(() => {
@@ -72,8 +75,13 @@ function handleToggleWishlist() {
 }
 
 function handleClose() {
-  closeModal()
-  router.push('/products')
+  if (isAdminPreview.value) {
+    // Admin preview: just close the modal, stay on admin page
+    closeModalWithoutNavigation()
+  } else {
+    // Customer flow: close and navigate
+    closeModal()
+  }
 }
 
 function viewRelated(slug) {
@@ -86,26 +94,37 @@ function viewRelated(slug) {
     <div 
       v-if="isOpen && product"
       class="fixed inset-0 z-50 overflow-y-auto"
+      :class="{ 'pm-dark': isAdminPreview }"
     >
       <!-- Overlay -->
       <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="handleClose" />
       
       <!-- Modal -->
       <div class="relative min-h-screen flex items-center justify-center p-4">
-        <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+        <div 
+          class="relative w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
+          :class="isAdminPreview ? 'pm-dark-card' : 'bg-white'"
+        >
+          <!-- Admin Preview Banner -->
+          <div v-if="isAdminPreview" class="pm-admin-banner">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Customer Preview</span>
+          </div>
+
           <!-- Close Button -->
           <button 
-            class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-lg flex items-center justify-center hover:bg-white transition-colors"
+            class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full backdrop-blur shadow-lg flex items-center justify-center transition-colors"
+            :class="isAdminPreview ? 'bg-white/10 hover:bg-white/20' : 'bg-white/90 hover:bg-white'"
             @click="handleClose"
           >
-            <svg class="w-5 h-5 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" :class="isAdminPreview ? 'text-gray-300' : 'text-surface-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
           
           <div class="grid md:grid-cols-2">
             <!-- Image Section -->
-            <div class="relative bg-surface-100">
+            <div class="relative" :class="isAdminPreview ? 'bg-gray-900' : 'bg-surface-100'">
               <!-- Main Image -->
               <div class="aspect-square overflow-hidden">
                 <img 
@@ -115,7 +134,7 @@ function viewRelated(slug) {
                   class="w-full h-full object-cover transition-all duration-300"
                   :key="selectedImageIndex"
                 />
-                <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-primary-50">
+                <div v-else class="w-full h-full flex items-center justify-center" :class="isAdminPreview ? 'bg-gradient-to-br from-gray-800 to-gray-900' : 'bg-gradient-to-br from-primary-100 to-primary-50'">
                   <svg class="w-24 h-24 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
@@ -147,7 +166,10 @@ function viewRelated(slug) {
                   v-for="(img, idx) in product.images.slice(0, 4)" 
                   :key="idx"
                   class="w-16 h-16 rounded-lg overflow-hidden border-2 shadow-lg transition-all duration-200 hover:scale-105"
-                  :class="selectedImageIndex === idx ? 'border-primary-500 ring-2 ring-primary-500 ring-offset-2' : 'border-white hover:border-primary-300'"
+                  :class="[
+                    selectedImageIndex === idx ? 'border-primary-500 ring-2 ring-primary-500 ring-offset-2' : (isAdminPreview ? 'border-gray-600 hover:border-gray-400' : 'border-white hover:border-primary-300'),
+                    isAdminPreview ? 'ring-offset-gray-900' : ''
+                  ]"
                   @click="selectedImageIndex = idx"
                 >
                   <img :src="img" :alt="`${product.name} ${idx + 1}`" class="w-full h-full object-cover" />
@@ -158,23 +180,23 @@ function viewRelated(slug) {
             <!-- Content Section -->
             <div class="p-6 md:p-8 flex flex-col">
               <!-- Category -->
-              <p class="text-sm text-primary-600 font-medium uppercase tracking-wide mb-2">
+              <p class="text-sm font-medium uppercase tracking-wide mb-2" :class="isAdminPreview ? 'text-emerald-400' : 'text-primary-600'">
                 {{ product.category }}
               </p>
               
               <!-- Name -->
-              <h1 class="text-2xl md:text-3xl font-display font-bold text-surface-900 mb-2">
+              <h1 class="text-2xl md:text-3xl font-display font-bold mb-2" :class="isAdminPreview ? 'text-gray-100' : 'text-surface-900'">
                 {{ product.name }}
               </h1>
               
               <!-- Price -->
               <div class="flex items-center gap-3 mb-4">
-                <span class="text-2xl font-bold text-primary-700">
+                <span class="text-2xl font-bold" :class="isAdminPreview ? 'text-emerald-400' : 'text-primary-700'">
                   {{ formatPrice(product.price) }}
                 </span>
                 <span 
                   v-if="product.comparePrice && product.comparePrice > product.price"
-                  class="text-lg text-surface-400 line-through"
+                  class="text-lg line-through" :class="isAdminPreview ? 'text-gray-500' : 'text-surface-400'"
                 >
                   {{ formatPrice(product.comparePrice) }}
                 </span>
@@ -189,20 +211,20 @@ function viewRelated(slug) {
               </p>
               
               <!-- Description -->
-              <p class="text-surface-600 mb-6 leading-relaxed">
+              <p class="mb-6 leading-relaxed" :class="isAdminPreview ? 'text-gray-400' : 'text-surface-600'">
                 {{ product.description }}
               </p>
               
               <!-- Benefits -->
               <div v-if="product.benefits?.length" class="mb-6">
-                <h3 class="text-sm font-semibold text-surface-900 mb-2">Key Benefits</h3>
+                <h3 class="text-sm font-semibold mb-2" :class="isAdminPreview ? 'text-gray-200' : 'text-surface-900'">Key Benefits</h3>
                 <ul class="space-y-2">
                   <li 
                     v-for="benefit in product.benefits" 
                     :key="benefit"
-                    class="flex items-start gap-2 text-sm text-surface-600"
+                    class="flex items-start gap-2 text-sm" :class="isAdminPreview ? 'text-gray-400' : 'text-surface-600'"
                   >
-                    <svg class="w-5 h-5 text-primary-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 shrink-0" :class="isAdminPreview ? 'text-emerald-500' : 'text-primary-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
                     {{ benefit }}
@@ -211,12 +233,12 @@ function viewRelated(slug) {
               </div>
               
               <!-- Weight/Size -->
-              <p v-if="product.weight" class="text-sm text-surface-500 mb-6">
-                <span class="font-medium">Size:</span> {{ product.weight }}
+              <p v-if="product.weight" class="text-sm mb-6" :class="isAdminPreview ? 'text-gray-500' : 'text-surface-500'">
+                <span class="font-medium" :class="isAdminPreview ? 'text-gray-300' : ''">Size:</span> {{ product.weight }}
               </p>
               
-              <!-- Action Buttons -->
-              <div class="mt-auto space-y-3">
+              <!-- Action Buttons (hidden in admin preview) -->
+              <div v-if="!isAdminPreview" class="mt-auto space-y-3">
                 <div class="flex gap-3">
                   <button 
                     class="flex-1 btn btn-primary btn-lg"
@@ -251,17 +273,28 @@ function viewRelated(slug) {
                   Buy Now
                 </button>
               </div>
+
+              <!-- Admin preview: Close button instead of shopping actions -->
+              <div v-if="isAdminPreview" class="mt-auto pt-4">
+                <button 
+                  class="w-full pm-admin-close-btn"
+                  @click="handleClose"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Close Preview
+                </button>
+              </div>
               
               <!-- Usage Instructions -->
-              <div v-if="product.usage" class="mt-6 p-4 bg-primary-50 rounded-xl">
-                <h3 class="text-sm font-semibold text-primary-800 mb-1">How to Use</h3>
-                <p class="text-sm text-primary-700">{{ product.usage }}</p>
+              <div v-if="product.usage" class="mt-6 p-4 rounded-xl" :class="isAdminPreview ? 'bg-emerald-900/20 border border-emerald-800/30' : 'bg-primary-50'">
+                <h3 class="text-sm font-semibold mb-1" :class="isAdminPreview ? 'text-emerald-300' : 'text-primary-800'">How to Use</h3>
+                <p class="text-sm" :class="isAdminPreview ? 'text-emerald-400/80' : 'text-primary-700'">{{ product.usage }}</p>
               </div>
             </div>
           </div>
           
-          <!-- Related Products -->
-          <div v-if="related.length" class="border-t border-surface-200 p-6">
+          <!-- Related Products (hidden in admin preview) -->
+          <div v-if="related.length && !isAdminPreview" class="border-t border-surface-200 p-6">
             <h3 class="text-lg font-display font-bold text-surface-900 mb-4">You May Also Like</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div 
@@ -305,5 +338,54 @@ function viewRelated(slug) {
 .scale-enter-from .animate-scale-in,
 .scale-leave-to .animate-scale-in {
   transform: scale(0.95);
+}
+
+/* =========================================
+   ADMIN DARK PREVIEW THEME
+   ========================================= */
+
+.pm-dark-card {
+  background: #111218;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Admin banner */
+.pm-admin-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.08));
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Admin close button */
+.pm-admin-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: #9ca3af;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pm-admin-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  border-color: rgba(255, 255, 255, 0.15);
 }
 </style>
