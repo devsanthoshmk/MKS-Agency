@@ -16,7 +16,9 @@ frontend/
 │   ├── schema.ts          # Database schema (users, orders, products, etc.)
 │   ├── queries.ts         # Read operations (products, orders, cart, etc.)
 │   ├── mutations.ts       # Write operations (products CRUD, orders, cart, etc.)
-│   └── files.ts           # File storage (image uploads)
+│   ├── files.ts           # File storage (image uploads)
+│   ├── crons.ts           # Scheduled tasks (daily image cleanup)
+│   └── maintenance.ts     # Maintenance routines (orphaned image cleanup)
 ├── scripts/
 │   └── seed-products.mjs  # Migrate products.json → Convex
 ├── src/
@@ -28,6 +30,7 @@ frontend/
 │   │   │   ├── ContentManager.vue      # CMS (coming soon)
 │   │   │   ├── OrderEditModal.vue      # Order editing modal
 │   │   │   ├── OrdersManager.vue       # Order list & search
+│   │   │   ├── ProductEditModal.vue    # Product editing modal (AI tools, JSON I/O, images)
 │   │   │   └── ProductsManager.vue     # Product CRUD
 │   │   ├── AuthModal.vue
 │   │   ├── CartPanel.vue
@@ -247,7 +250,43 @@ The admin dashboard (`/admin`) provides a comprehensive interface for managing t
 | `OrdersManager.vue` | Order list with search, filter, and selection |
 | `OrderEditModal.vue` | Full order editing with status updates, tracking info, and notes |
 | `ProductsManager.vue` | Product list with create/edit/delete via Convex mutations |
+| `ProductEditModal.vue` | **NEW**: Product editing modal with AI-powered tools, JSON I/O, smart image detection, sortable images |
 | `ContentManager.vue` | Placeholder for future CMS features |
+
+### Product Management Features
+
+**ProductEditModal.vue** provides comprehensive product editing capabilities:
+
+#### AI-Powered Product Tools
+
+The product edit modal includes an **AI** dropdown menu with intelligent tools for product data management:
+
+- **Copy AI Prompt**: Generates and copies a structured AI prompt containing:
+  - Product data inference and validation instructions
+  - The full product JSON Schema with constraints
+  - Current product data pre-filled as the initial context
+  - Paste the prompt into ChatGPT (or any LLM) to get AI-assisted product data completion
+- **Copy JSON**: Export current product data as clean JSON for bulk edits or migrations
+- **Paste JSON Data**: Import JSON data into the product form (with smart image URL handling)
+
+> **📌 Future: Fill with ChatGPT** — Currently commented out and reserved for Chrome extension integration. When enabled, it will open `chatgpt.com` with the AI prompt pre-filled via URL query parameter, allowing one-click AI-assisted product data completion directly from the admin panel.
+
+#### Smart Image URL Detection
+- Automatically detects if image URLs are from the current Convex deployment (dev vs prod)
+- Reuses own deployment URLs without re-uploading (performance optimization)
+- Downloads and re-uploads external URLs or URLs from other deployments
+- **Persistent Notifications**: Shows clear feedback about what happened with images:
+  - "✅ 3 image(s) reused from storage — no re-upload needed."
+  - "⬇️ Downloading 2 image(s) from URL and uploading to storage..."
+  - "⚠️ No valid image URLs found in JSON. Please upload images manually."
+
+#### Image Management
+- **Drag-and-drop sorting**: Reorder product images with visual feedback
+- **Direct upload**: Standard file picker with 5MB limit
+- **URL download**: Paste external image URLs in JSON — automatically downloaded and uploaded to Convex storage
+- **Automated cleanup**: Daily cron job removes orphaned images (see DATABASE.md for details)
+
+**See also**: `docs/DATABASE.md` → "JSON Import/Export" and "Automated Image Cleanup" sections for full technical details.
 
 ### Order Status Updates
 
@@ -401,6 +440,22 @@ fetch(`${API_URL}/api/endpoint`, { ... })
 | Database | https://tame-ermine-520.convex.cloud |
 
 ## Changelog
+
+### AI-Powered Product Tools (Feb 2026)
+
+The product edit modal now includes an **AI** dropdown menu replacing the previous JSON-only menu.
+
+**What changed:**
+- `ProductEditModal.vue` — "JSON" button renamed to "AI" with new options:
+  - **Copy AI Prompt**: Generates a structured AI prompt with the product schema + current data, ready for ChatGPT or any LLM
+  - **Copy JSON**: Same as previous "Copy as JSON"
+  - **Paste JSON Data**: Same as previous "Paste from JSON"
+- Embedded a full AI prompt template with product validation rules, JSON schema, and usage instructions
+- `openChatGptWithPrompt()` function scaffolded but commented out — reserved for future Chrome extension integration
+
+**Future improvements:**
+- Chrome extension to auto-fill product data via ChatGPT URL query parameter
+- Direct LLM integration within the admin panel (API-based, no manual copy-paste)
 
 ### Products Migration (Feb 2026)
 

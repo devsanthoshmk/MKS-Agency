@@ -24,6 +24,7 @@ const isCreatingProduct = ref(false)
 const isSaving = ref(false)
 const saveError = ref('')
 const saveSuccess = ref('')
+const imageNotice = ref('')
 const searchQuery = ref('')
 const categoryFilter = ref('all')
 const isUploading = ref(false)
@@ -99,6 +100,7 @@ function createNewProduct() {
   activeSection.value = 'basic'
   saveError.value = ''
   saveSuccess.value = ''
+  imageNotice.value = ''
 }
 
 function editProduct(product) {
@@ -110,11 +112,13 @@ function editProduct(product) {
   isCreatingProduct.value = false
   saveError.value = ''
   saveSuccess.value = ''
+  imageNotice.value = ''
 }
 
 function cancelEdit() {
   editingProduct.value = null
   isCreatingProduct.value = false
+  imageNotice.value = ''
 }
 
 function previewProduct(product) {
@@ -269,6 +273,123 @@ async function processFiles(files) {
   isUploading.value = false
   uploadProgress.value = 0
 }
+
+/**
+ * Download external image URLs and re-upload them to Convex storage.
+ * Skips URLs that already belong to the current Convex deployment (reuses them).
+ * Used by the JSON paste feature when images are from external sources.
+ */
+async function downloadAndUploadImages(imageUrls) {
+  if (!editingProduct.value || !imageUrls?.length) return
+  if (!convexClient) {
+    saveError.value = 'Convex not configured. Cannot upload images.'
+    return
+  }
+
+  // Extract own deployment hostname for URL matching
+  let ownHost = ''
+  try {
+    ownHost = CONVEX_URL ? new URL(CONVEX_URL).hostname : ''
+  } catch { /* ignore */ }
+
+  isUploading.value = true
+  uploadProgress.value = 0
+  saveError.value = ''
+
+  const totalUrls = imageUrls.length
+  let uploadedCount = 0
+  let failedCount = 0
+  let reusedCount = 0
+  let downloadedCount = 0
+
+  for (const externalUrl of imageUrls) {
+    try {
+      // Defense in depth: if the URL belongs to this Convex deployment, reuse it
+      let urlHost = ''
+      try { urlHost = new URL(externalUrl).hostname } catch { /* invalid */ }
+
+      if (ownHost && urlHost === ownHost) {
+        // This is our own Convex URL — reuse directly without re-uploading
+        if (editingProduct.value) {
+          editingProduct.value = {
+            ...editingProduct.value,
+            images: [...(editingProduct.value.images || []), externalUrl]
+          }
+        }
+        reusedCount++
+        uploadedCount++
+        uploadProgress.value = Math.round((uploadedCount / totalUrls) * 100)
+        continue
+      }
+
+      // Download the external image
+      const response = await fetch(externalUrl, { mode: 'cors' })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      
+      const blob = await response.blob()
+      
+      // Validate it's actually an image
+      if (!blob.type.startsWith('image/')) {
+        console.warn(`Skipping non-image URL: ${externalUrl} (type: ${blob.type})`)
+        failedCount++
+        uploadedCount++
+        uploadProgress.value = Math.round((uploadedCount / totalUrls) * 100)
+        continue
+      }
+
+      // Check size (max 5MB)
+      if (blob.size > 5 * 1024 * 1024) {
+        console.warn(`Image too large (${(blob.size / 1024 / 1024).toFixed(1)}MB): ${externalUrl}`)
+        failedCount++
+        uploadedCount++
+        uploadProgress.value = Math.round((uploadedCount / totalUrls) * 100)
+        continue
+      }
+      
+      // Upload to Convex storage
+      const uploadUrl = await convexClient.mutation(api.files.generateUploadUrl, {})
+      const uploadResult = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': blob.type },
+        body: blob,
+      })
+      if (!uploadResult.ok) throw new Error(`Upload failed: ${uploadResult.status}`)
+      
+      const { storageId } = await uploadResult.json()
+      const publicUrl = await convexClient.query(api.files.getFileUrl, { storageId })
+      
+      if (publicUrl && editingProduct.value) {
+        // Create a new object reference so Vue triggers prop update in the child modal
+        editingProduct.value = {
+          ...editingProduct.value,
+          images: [...(editingProduct.value.images || []), publicUrl]
+        }
+      }
+      downloadedCount++
+    } catch (err) {
+      console.error(`Failed to download/upload image from ${externalUrl}:`, err)
+      failedCount++
+    }
+    
+    uploadedCount++
+    uploadProgress.value = Math.round((uploadedCount / totalUrls) * 100)
+  }
+
+  isUploading.value = false
+  uploadProgress.value = 0
+
+  // Update persistent image notice with final result
+  const parts = []
+  if (reusedCount > 0) parts.push(`✅ ${reusedCount} image(s) reused from storage`)
+  if (downloadedCount > 0) parts.push(`✅ ${downloadedCount} image(s) downloaded and uploaded`)
+  if (failedCount > 0) {
+    parts.push(`❌ ${failedCount} image(s) failed`)
+    saveError.value = `${failedCount} of ${totalUrls} image(s) failed to download/upload. Check the console for details.`
+  }
+  if (parts.length > 0) {
+    imageNotice.value = parts.join(' · ')
+  }
+}
 </script>
 
 <template>
@@ -360,6 +481,7 @@ async function processFiles(files) {
     <!-- Product Edit/Create Modal -->
     <ProductEditModal
       v-model="editingProduct"
+      v-model:imageNotice="imageNotice"
       :is-creating="isCreatingProduct"
       :is-saving="isSaving"
       :is-uploading="isUploading"
@@ -371,6 +493,7 @@ async function processFiles(files) {
       @save="saveProduct"
       @cancel="cancelEdit"
       @upload-images="processFiles"
+      @download-and-upload-images="downloadAndUploadImages"
     />
   </div>
 </template>

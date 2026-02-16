@@ -496,3 +496,167 @@ VITE_CONVEX_URL=https://your-deployment.convex.cloud
 - Maximum file size: 5MB (enforced in ProductsManager.vue)
 - Supported formats: PNG, JPG, GIF, WebP
 - Images are stored permanently until explicitly deleted via `deleteFile()` mutation
+
+---
+
+## Automated Image Cleanup
+
+### Daily Cron Job for Orphaned Images
+
+A scheduled Convex cron job runs **daily at 2:30 AM UTC** to automatically clean up unused images from file storage.
+
+**Location**: `convex/crons.ts`, `convex/maintenance.ts`
+
+**Features**:
+- **Orphan Detection**: Identifies images not referenced by any product (active, inactive, or draft)
+- **Grace Period**: 24-hour safety window — newly uploaded files are never deleted to prevent race conditions
+- **Batched Deletion**: Max 100 files per run to avoid timeouts
+- **Atomic Execution**: Uses `internalMutation` for exactly-once, safe execution
+- **Logging**: Returns detailed summary for monitoring
+
+**How it works**:
+```typescript
+// 1. Collects all image URLs from products table
+const allProducts = await ctx.db.query("products").collect()
+const referencedUrls = new Set<string>()
+for (const product of allProducts) {
+  if (product.images) referencedUrls.add(...product.images)
+}
+
+// 2. Queries all files from _storage system table
+const allStoredFiles = await ctx.db.system.query("_storage").collect()
+
+// 3. For each file:
+//    - Skip if uploaded < 24 hours ago (grace period)
+//    - Resolve public URL via ctx.storage.getUrl()
+//    - If URL not in referencedUrls → delete via ctx.storage.delete()
+
+// 4. Returns summary:
+{
+  success: true,
+  timestamp: Date.now(),
+  summary: {
+    totalStoredFiles: 42,
+    totalProductImages: 38,
+    totalProducts: 15,
+    deletedOrphans: 4,
+    hitDeletionLimit: false
+  }
+}
+```
+
+**Monitoring**: Check Convex Dashboard → **Schedules** tab to view cron job execution history and logs.
+
+**Safety Features**:
+- All products checked (including inactive/draft) — prevents deletion of temporarily deactivated product images
+- 24-hour grace period prevents deletion of images mid-upload or during multi-step product creation
+- Batch limit ensures reliable completion
+- Internal mutation guarantees atomic execution
+
+---
+
+## JSON Import/Export
+
+### Product Data Import/Export via JSON
+
+The admin panel's **Product Edit Modal** includes a JSON import/export feature for bulk product edits and migrations.
+
+**Location**: `ProductEditModal.vue`
+
+**Features**:
+- **Export**: Copy current product fields as JSON
+- **Paste**: Apply JSON data to product form
+- **Smart Image URL Detection**: Environment-aware Convex URL handling
+- **Persistent Notifications**: Clear feedback on what happened with images
+
+### How It Works
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                    JSON Paste Workflow                              │
+│                                                                    │
+│  User pastes JSON → Parse → Separate images by source             │
+│                                     ↓                              │
+│                         ┌───────────┴────────────┐                 │
+│                         │                        │                 │
+│                    Own Convex URLs         External URLs           │
+│                    (same deployment)       (or other deployments)  │
+│                         │                        │                 │
+│                    Reuse as-is           Download → Upload         │
+│                         │                        │                 │
+│                         └────────────┬───────────┘                 │
+│                                      ↓                              │
+│                         Update product.images[]                    │
+│                                      ↓                              │
+│                        Show persistent notice                      │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+### Smart Image URL Detection
+
+The system intelligently handles image URLs from different sources:
+
+| URL Source | Behavior | Example |
+|------------|----------|---------|
+| **Current deployment** | Reused directly (no re-upload) | Dev mode: `woozy-otter-565.convex.cloud` URLs stay as-is |
+| **Other Convex deployment** | Downloaded + re-uploaded | Dev mode: `tame-ermine-520.convex.cloud` (prod) URLs are downloaded |
+| **External URL** | Downloaded + uploaded to Convex | `https://example.com/image.jpg` → uploads to current storage |
+
+**Implementation**:
+```typescript
+// Extract current deployment hostname from VITE_CONVEX_URL
+const ownConvexHost = new URL(import.meta.env.VITE_CONVEX_URL).hostname
+// e.g., "woozy-otter-565.convex.cloud"
+
+function isOwnConvexUrl(url) {
+  const urlHost = new URL(url).hostname
+  return urlHost === ownConvexHost
+}
+
+// In applyJsonData():
+for (const imgUrl of parsed.images) {
+  if (isOwnConvexUrl(imgUrl)) {
+    ownConvexImages.push(imgUrl)  // Reuse directly
+  } else {
+    externalImageUrls.push(imgUrl) // Download + upload
+  }
+}
+```
+
+**Why this matters**:
+- **Dev → Prod migration**: Pasting JSON from dev with dev image URLs in prod will correctly re-upload to prod storage
+- **Prod → Dev testing**: Vice-versa works too
+- **External migrations**: Images from any external source are automatically uploaded to your current Convex storage
+- **Performance**: Own images skip wasteful re-download/re-upload
+
+### Persistent Image Notifications
+
+A dismissable notification banner appears after JSON paste showing what happened:
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│  ✅ 3 image(s) reused from storage — no re-upload needed.    [×]   │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+**Notification Scenarios**:
+
+| Scenario | Notification | Color |
+|----------|--------------|-------|
+| All images from this deployment | `✅ 3 image(s) reused from storage — no re-upload needed.` | Blue (info) |
+| All external URLs | `⬇️ Downloading 2 image(s) from URL and uploading to storage...` → Final: `✅ 2 image(s) downloaded and uploaded` | Blue (info) |
+| Mix of own + external | `✅ 1 image(s) reused. ⬇️ Downloading 2 external image(s)...` | Blue (info) |
+| No valid image URLs | `⚠️ No valid image URLs found in JSON. Please upload images manually.` | Amber (warning) |
+| Some failed | `✅ 3 image(s) downloaded · ❌ 1 image(s) failed` | Blue + error in console |
+
+**Features**:
+- **Persistent**: Stays visible until dismissed (× button)
+- **Auto-clears**: Removed when opening/creating/cancelling a different product
+- **Informative**: Shows counts and actions taken
+- **Non-blocking**: Doesn't interfere with form interaction
+
+**Implementation**:
+- `imageNotice` ref in `ProductsManager.vue`
+- Passed as `v-model:imageNotice` to `ProductEditModal.vue`
+- Updated by modal during JSON paste and by parent during download/upload
+- Rendered as `.prod-msg--notice` banner with conditional warning styling
