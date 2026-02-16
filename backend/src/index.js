@@ -1,5 +1,5 @@
 /**
- * Cloudflare Workers Backend - MKS Agencies E-commerce API
+ * Cloudflare Workers Backend - MKS AGENCY E-commerce API
  * 
  * This backend handles:
  * - Authentication (Google OAuth, email, guest)

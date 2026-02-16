@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useUI } from '../composables/useUI'
 import { useCart } from '../composables/useCart'
 import { useWishlist } from '../composables/useWishlist'
 
@@ -11,9 +11,10 @@ const props = defineProps({
   }
 })
 
-const router = useRouter()
+// const router = useRouter() // Not needed for modal opening
 const { addItem, isInCart } = useCart()
 const { toggleItem, isInWishlist } = useWishlist()
+const { openModal } = useUI()
 
 const discount = computed(() => {
   if (props.product.comparePrice && props.product.comparePrice > props.product.price) {
@@ -27,7 +28,7 @@ const inCart = computed(() => isInCart(props.product.id))
 const inWishlist = computed(() => isInWishlist(props.product.id))
 
 function viewProduct() {
-  router.push(`/product/${props.product.slug}`)
+  openModal('product', props.product)
 }
 
 function handleAddToCart(e) {

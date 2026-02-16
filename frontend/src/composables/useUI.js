@@ -43,8 +43,15 @@ export function useUI() {
         modalData.value = null
         document.body.style.overflow = ''
 
-        // Navigate back to previous route for route-based modals
-        if (wasModal === 'wishlist' || wasModal === 'cart' || wasModal === 'product') {
+        // Navigate back only if we are on a dedicated route for this modal
+        // e.g. deep-linked /product/:slug
+        const currentRouteName = router.currentRoute.value?.name
+
+        if (wasModal === 'product' && currentRouteName === 'product-detail') {
+            router.push(previousRoute.value || '/products')
+        } else if (wasModal === 'checkout' && currentRouteName === 'checkout') {
+            router.push(previousRoute.value || '/products')
+        } else if (wasModal === 'orders' && currentRouteName === 'orders') {
             router.push(previousRoute.value || '/products')
         }
     }

@@ -170,35 +170,26 @@ export function useWishlist() {
         items.value = []
     }
 
-    // Toggle wishlist panel (use router hash)
+    // Initialize UI helpers in setup scope
+    const { activeModal, openModal, closeModal } = useUI()
+
+    // Toggle wishlist panel
     function toggleWishlist() {
-        const { activeModal } = useUI()
-        // Import router in the function to avoid issues at module level
-        const router = window.__vueRouter
         if (activeModal.value === 'wishlist') {
-            router?.push({ hash: '' })
+            closeModal()
         } else {
-            router?.push({ hash: '#wishlist' })
+            openModal('wishlist')
         }
     }
 
     function openWishlist() {
-        const router = window.__vueRouter
-        router?.push({ hash: '#wishlist' })
+        openModal('wishlist')
     }
 
     function closeWishlist() {
-        const router = window.__vueRouter
-        // Only navigate if hash exists, otherwise just close the modal
-        if (router?.currentRoute?.value?.hash === '#wishlist') {
-            router.push({ hash: '' })
-        } else {
-            const { closeModalWithoutNavigation } = useUI()
-            closeModalWithoutNavigation()
-        }
+        closeModal()
     }
 
-    const { activeModal } = useUI()
     const isOpen = computed(() => activeModal.value === 'wishlist')
 
     return {

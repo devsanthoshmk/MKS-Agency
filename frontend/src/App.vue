@@ -21,7 +21,7 @@ const { isOpen: isCartOpen, closeCart } = useCart()
 const { isOpen: isWishlistOpen, closeWishlist } = useWishlist()
 const { loadProducts, getProductBySlug } = useProducts()
 const { isAuthModalOpen } = useAuth()
-const { activeModal, openModal, closeModalWithoutNavigation, setupEscapeListener, removeEscapeListener } = useUI()
+const { activeModal, openModal, closeModal, setupEscapeListener, removeEscapeListener } = useUI()
 
 // Maintenance popup state
 const showMaintenancePopup = ref(false)
@@ -53,18 +53,6 @@ onUnmounted(() => {
   removeEscapeListener()
 })
 
-// Watch route hash for cart/wishlist modals
-watch(() => route.hash, (hash, oldHash) => {
-  if (hash === '#wishlist') {
-    openModal('wishlist')
-  } else if (hash === '#cart') {
-    openModal('cart')
-  } else if (oldHash === '#wishlist' || oldHash === '#cart') {
-    // Hash was removed, close the modal
-    closeModalWithoutNavigation()
-  }
-}, { immediate: true })
-
 // Watch route for checkout/orders modals
 watch(() => route.name, (name) => {
   if (name === 'checkout') {
@@ -74,19 +62,9 @@ watch(() => route.name, (name) => {
   }
 }, { immediate: true })
 
-// Handle overlay click - close and remove hash from URL
+// Handle overlay click
 function handleOverlayClick() {
-  if (activeModal.value === 'cart' || activeModal.value === 'wishlist') {
-    // Only navigate if there's a hash to remove
-    if (route.hash === '#cart' || route.hash === '#wishlist') {
-      router.push({ path: route.path, hash: '' })
-    } else {
-      // Cart was opened without hash (e.g., from addItem), just close it
-      closeModalWithoutNavigation()
-    }
-  } else {
-    closeModalWithoutNavigation()
-  }
+  closeModal()
 }
 </script>
 

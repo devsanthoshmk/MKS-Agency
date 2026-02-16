@@ -25,13 +25,13 @@ const router = createRouter({
             path: '/',
             name: 'home',
             component: HomePage,
-            meta: { title: 'MKS Agencies - Siddha & Ayurveda Solutions' }
+            meta: { title: 'MKS AGENCY - Siddha & Ayurveda Solutions' }
         },
         {
             path: '/products',
             name: 'products',
             component: HomePage,
-            meta: { title: 'Products - MKS Agencies' }
+            meta: { title: 'Products - MKS AGENCY' }
         },
         {
             path: '/product/:slug',
@@ -45,37 +45,37 @@ const router = createRouter({
                 }
                 next()
             },
-            meta: { title: 'Product Details - MKS Agencies' }
+            meta: { title: 'Product Details - MKS AGENCY' }
         },
         // Cart and wishlist are now handled via hash fragments (e.g., /products#wishlist)
         {
             path: '/checkout',
             name: 'checkout',
             component: HomePage,
-            meta: { title: 'Checkout - MKS Agencies' }
+            meta: { title: 'Checkout - MKS AGENCY' }
         },
         {
             path: '/orders',
             name: 'orders',
             component: HomePage,
-            meta: { title: 'My Orders - MKS Agencies' }
+            meta: { title: 'My Orders - MKS AGENCY' }
         },
         {
             path: '/verify/:token',
             name: 'guest-verify',
             component: GuestVerification,
-            meta: { title: 'Verify Your Order - MKS Agencies' }
+            meta: { title: 'Verify Your Order - MKS AGENCY' }
         },
         {
             path: '/login/:token',
             name: 'email-login',
             component: LoginVerification,
-            meta: { title: 'Sign In - MKS Agencies' }
+            meta: { title: 'Sign In - MKS AGENCY' }
         },
         {
             path: '/admin',
             component: AdminDashboard,
-            meta: { title: 'Admin Dashboard - MKS Agencies' },
+            meta: { title: 'Admin Dashboard - MKS AGENCY' },
             redirect: '/admin/analytics',
             children: [
                 { path: 'analytics', name: 'admin-analytics', component: { render: () => null }, meta: { title: 'Overview - MKS Admin' } },
@@ -94,10 +94,7 @@ const router = createRouter({
         if (savedPosition) {
             return savedPosition
         }
-        // Don't scroll for cart/wishlist hash navigation
-        if (to.hash === '#cart' || to.hash === '#wishlist') {
-            return false
-        }
+
         if (to.hash) {
             return { el: to.hash, behavior: 'smooth' }
         }
@@ -111,7 +108,7 @@ const router = createRouter({
 
 // Update page title on route change
 router.beforeEach((to, from, next) => {
-    document.title = to.meta.title || 'MKS Agencies'
+    document.title = to.meta.title || 'MKS AGENCY'
     next()
 })
 

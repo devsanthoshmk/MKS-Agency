@@ -28,7 +28,7 @@ const isInitialized = ref(false)
 
 export function useCart() {
     const { isAuthenticated, convexUserId } = useAuth()
-    const { openModal } = useUI()
+    const { openModal, closeModal } = useUI()
 
     // Initialize
     if (!isInitialized.value) {

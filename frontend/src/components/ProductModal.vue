@@ -84,8 +84,14 @@ function handleClose() {
   }
 }
 
-function viewRelated(slug) {
-  router.push(`/product/${slug}`)
+async function viewRelated(slug) {
+  const newProduct = await getProductBySlug(slug)
+  if (newProduct) {
+    openModal('product', newProduct)
+    // Scroll to top of modal content
+    const modalContent = document.querySelector('.pm-dark-card, .bg-white.relative')
+    if (modalContent) modalContent.scrollIntoView({ behavior: 'smooth' })
+  }
 }
 </script>
 
