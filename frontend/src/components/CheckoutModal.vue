@@ -183,83 +183,98 @@ const indianStates = [
       class="fixed inset-0 z-50 overflow-y-auto"
     >
       <!-- Overlay -->
-      <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="handleClose" />
+      <div class="overlay" @click="handleClose" />
       
       <!-- Modal -->
       <div class="relative min-h-screen flex items-center justify-center p-4">
-        <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+          <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden animate-scale-in z-50">
           <!-- Close Button -->
           <button 
-            class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center hover:bg-surface-200 transition-colors"
+            class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center bg-surface-50 hover:bg-surface-100 transition-colors"
             @click="handleClose"
           >
-            <svg class="w-5 h-5 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
           
           <!-- Success State -->
-          <div v-if="orderSuccess" class="p-8 text-center">
-            <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-              <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div v-if="orderSuccess" class="p-12 text-center flex flex-col items-center">
+            <div class="w-24 h-24 rounded-full bg-emerald-50 flex items-center justify-center mb-8 relative">
+               <div class="absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-20"></div>
+              <svg class="w-12 h-12 text-emerald-600 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 class="text-2xl font-display font-bold text-surface-900 mb-2">Order Placed!</h2>
-            <p class="text-surface-600 mb-2">Your order number is:</p>
-            <p class="text-xl font-bold text-primary-700 mb-4">{{ orderNumber }}</p>
-            <p class="text-surface-500 text-sm mb-6">
-              We will contact you shortly to verify your payment. 
+            <h2 class="text-3xl font-display font-bold text-surface-900 mb-2">Order Confirmed!</h2>
+            <p class="text-surface-600 mb-6 max-w-md mx-auto">
+               Thank you for your purchase. We have received your order and will begin processing it right away.
+            </p>
+            
+             <div class="bg-surface-50 rounded-xl p-4 mb-8 w-full max-w-sm border border-surface-100">
+               <p class="text-xs text-surface-500 uppercase tracking-wide font-bold mb-1">Order Number</p>
+               <p class="text-2xl font-mono font-bold text-primary-700">{{ orderNumber }}</p>
+             </div>
+
+            <p class="text-surface-500 text-sm mb-8">
               <template v-if="!isAuthenticated">
-                A verification email has been sent to your email address.
+                A verification link has been sent to <span class="font-bold text-surface-900">{{ form.email }}</span>.
+              </template>
+              <template v-else>
+                 Check your email for order details.
               </template>
             </p>
-            <div class="flex flex-col sm:flex-row gap-3 justify-center">
-              <button class="btn btn-primary" @click="goToOrders">View My Orders</button>
-              <button class="btn btn-secondary" @click="handleClose">Continue Shopping</button>
+            
+            <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+              <button class="flex-1 btn btn-primary btn-lg" @click="goToOrders">Track Your Order</button>
+              <button class="flex-1 btn btn-secondary btn-lg" @click="handleClose">Back to Shop</button>
             </div>
           </div>
           
           <!-- Checkout Form -->
           <div v-else>
-            <div class="p-6 border-b border-surface-200">
-              <h2 class="text-xl font-display font-bold text-surface-900">Checkout</h2>
-              <p class="text-surface-500 text-sm mt-1">
-                {{ isAuthenticated ? 'Complete your order' : 'Enter your details to place order' }}
+            <div class="p-8 border-b border-surface-100 bg-surface-50/50">
+              <h2 class="text-2xl font-display font-bold text-surface-900">Secure Checkout</h2>
+              <p class="text-surface-500 text-sm mt-1 flex items-center gap-2">
+                 <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                {{ isAuthenticated ? 'Complete your purchase securely' : 'Enter details to verify & order' }}
               </p>
             </div>
             
-            <form @submit.prevent="handleSubmit" class="p-6 space-y-6">
+            <form @submit.prevent="handleSubmit" class="p-8 space-y-8">
               <!-- Contact Information -->
-              <div>
-                <h3 class="text-sm font-semibold text-surface-900 mb-4">Contact Information</h3>
-                <div class="grid gap-4">
+              <div class="space-y-4">
+                <h3 class="text-sm font-bold text-surface-900 uppercase tracking-widest flex items-center gap-2">
+                   <span class="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs">1</span>
+                   Contact Details
+                </h3>
+                <div class="grid gap-5">
                   <div>
-                    <label class="block text-sm font-medium text-surface-700 mb-1">Full Name *</label>
+                    <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">Full Name</label>
                     <input 
                       v-model="form.name"
                       type="text"
                       class="input"
                       :class="{ 'input-error': errors.name }"
-                      placeholder="Enter your full name"
+                      placeholder="e.g. John Doe"
                     />
-                    <p v-if="errors.name" class="text-red-500 text-xs mt-1">{{ errors.name }}</p>
+                    <p v-if="errors.name" class="text-red-500 text-xs mt-1 ml-1">{{ errors.name }}</p>
                   </div>
                   
-                  <div class="grid sm:grid-cols-2 gap-4">
+                  <div class="grid sm:grid-cols-2 gap-5">
                     <div>
-                      <label class="block text-sm font-medium text-surface-700 mb-1">Email *</label>
+                      <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">Email</label>
                       <input 
                         v-model="form.email"
                         type="email"
                         class="input"
                         :class="{ 'input-error': errors.email }"
-                        placeholder="your@email.com"
+                        placeholder="john@example.com"
                       />
-                      <p v-if="errors.email" class="text-red-500 text-xs mt-1">{{ errors.email }}</p>
+                      <p v-if="errors.email" class="text-red-500 text-xs mt-1 ml-1">{{ errors.email }}</p>
                     </div>
                     <div>
-                      <label class="block text-sm font-medium text-surface-700 mb-1">Phone *</label>
+                      <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">Phone</label>
                       <input 
                         v-model="form.phone"
                         type="tel"
@@ -267,18 +282,21 @@ const indianStates = [
                         :class="{ 'input-error': errors.phone }"
                         placeholder="10-digit mobile number"
                       />
-                      <p v-if="errors.phone" class="text-red-500 text-xs mt-1">{{ errors.phone }}</p>
+                      <p v-if="errors.phone" class="text-red-500 text-xs mt-1 ml-1">{{ errors.phone }}</p>
                     </div>
                   </div>
                 </div>
               </div>
               
               <!-- Shipping Address -->
-              <div>
-                <h3 class="text-sm font-semibold text-surface-900 mb-4">Shipping Address</h3>
-                <div class="grid gap-4">
+              <div class="space-y-4">
+                 <h3 class="text-sm font-bold text-surface-900 uppercase tracking-widest flex items-center gap-2">
+                   <span class="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs">2</span>
+                   Shipping Address
+                </h3>
+                <div class="grid gap-5">
                   <div>
-                    <label class="block text-sm font-medium text-surface-700 mb-1">Address *</label>
+                    <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">Address</label>
                     <textarea 
                       v-model="form.address"
                       rows="2"
@@ -286,12 +304,12 @@ const indianStates = [
                       :class="{ 'input-error': errors.address }"
                       placeholder="House/Flat No, Street, Landmark"
                     />
-                    <p v-if="errors.address" class="text-red-500 text-xs mt-1">{{ errors.address }}</p>
+                    <p v-if="errors.address" class="text-red-500 text-xs mt-1 ml-1">{{ errors.address }}</p>
                   </div>
                   
-                  <div class="grid sm:grid-cols-3 gap-4">
+                  <div class="grid sm:grid-cols-3 gap-5">
                     <div>
-                      <label class="block text-sm font-medium text-surface-700 mb-1">City *</label>
+                      <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">City</label>
                       <input 
                         v-model="form.city"
                         type="text"
@@ -299,10 +317,10 @@ const indianStates = [
                         :class="{ 'input-error': errors.city }"
                         placeholder="City"
                       />
-                      <p v-if="errors.city" class="text-red-500 text-xs mt-1">{{ errors.city }}</p>
+                      <p v-if="errors.city" class="text-red-500 text-xs mt-1 ml-1">{{ errors.city }}</p>
                     </div>
                     <div>
-                      <label class="block text-sm font-medium text-surface-700 mb-1">State *</label>
+                      <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">State</label>
                       <select 
                         v-model="form.state"
                         class="input"
@@ -313,10 +331,10 @@ const indianStates = [
                           {{ state }}
                         </option>
                       </select>
-                      <p v-if="errors.state" class="text-red-500 text-xs mt-1">{{ errors.state }}</p>
+                      <p v-if="errors.state" class="text-red-500 text-xs mt-1 ml-1">{{ errors.state }}</p>
                     </div>
                     <div>
-                      <label class="block text-sm font-medium text-surface-700 mb-1">PIN Code *</label>
+                      <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">PIN Code</label>
                       <input 
                         v-model="form.postal"
                         type="text"
@@ -325,57 +343,58 @@ const indianStates = [
                         :class="{ 'input-error': errors.postal }"
                         placeholder="6-digit PIN"
                       />
-                      <p v-if="errors.postal" class="text-red-500 text-xs mt-1">{{ errors.postal }}</p>
+                      <p v-if="errors.postal" class="text-red-500 text-xs mt-1 ml-1">{{ errors.postal }}</p>
                     </div>
                   </div>
                 </div>
               </div>
               
               <!-- Order Summary -->
-              <div class="bg-surface-50 rounded-xl p-4">
-                <h3 class="text-sm font-semibold text-surface-900 mb-3">Order Summary</h3>
-                <div class="space-y-2 text-sm">
+              <div class="bg-surface-50 rounded-2xl p-6 border border-surface-100">
+                <h3 class="text-sm font-bold text-surface-900 mb-4">Order Summary</h3>
+                <div class="space-y-3 text-sm">
                   <div class="flex justify-between">
                     <span class="text-surface-600">Subtotal ({{ items.length }} items)</span>
-                    <span class="font-medium">{{ formatPrice(subtotal) }}</span>
+                    <span class="font-medium text-surface-900">{{ formatPrice(subtotal) }}</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-surface-600">Shipping</span>
-                    <span v-if="shippingFee === 0" class="text-green-600 font-medium">FREE</span>
-                    <span v-else class="font-medium">{{ formatPrice(shippingFee) }}</span>
+                    <span v-if="shippingFee === 0" class="text-emerald-600 font-bold">Free</span>
+                    <span v-else class="font-medium text-surface-900">{{ formatPrice(shippingFee) }}</span>
                   </div>
-                  <div class="border-t border-surface-200 pt-2 mt-2 flex justify-between">
-                    <span class="font-semibold text-surface-900">Total</span>
-                    <span class="font-bold text-primary-700 text-lg">{{ formatPrice(total) }}</span>
+                  <div class="border-t border-surface-200 pt-3 mt-3 flex justify-between items-center">
+                    <span class="font-bold text-surface-900">Total</span>
+                    <span class="font-display font-bold text-2xl text-primary-700">{{ formatPrice(total) }}</span>
                   </div>
                 </div>
               </div>
               
-              <!-- Guest Notice -->
-              <div v-if="!isAuthenticated" class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <!-- Notices -->
+              <!-- Guest -->
+              <div v-if="!isAuthenticated" class="notice notice-info">
                 <div class="flex gap-3">
-                  <svg class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div class="text-sm">
-                    <p class="text-blue-800 font-medium">Checkout as Guest</p>
-                    <p class="text-blue-700 mt-1">
+                    <p class="font-bold">Checkout as Guest</p>
+                    <p class="mt-1 opacity-90">
                       You'll receive a verification link via email. Your order will be confirmed once verified.
                     </p>
                   </div>
                 </div>
               </div>
               
-              <!-- Payment Notice -->
-              <div class="bg-accent-50 border border-accent-200 rounded-xl p-4">
+              <!-- Payment -->
+              <div class="bg-accent-50 border border-accent-100 rounded-xl p-4 text-accent-900">
                 <div class="flex gap-3">
-                  <svg class="w-5 h-5 text-accent-700 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 shrink-0 mt-0.5 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div class="text-sm">
-                    <p class="text-accent-800 font-medium">Manual Payment</p>
-                    <p class="text-accent-700 mt-1">
-                      After placing your order, we will contact you via phone/email to verify payment details.
+                    <p class="font-bold text-accent-800">Phone/Manual Payment</p>
+                    <p class="mt-1 text-accent-700">
+                      We'll contact you to verify payment details after you place the order.
                     </p>
                   </div>
                 </div>
@@ -384,11 +403,17 @@ const indianStates = [
               <!-- Submit Button -->
               <button 
                 type="submit"
-                class="w-full btn btn-primary btn-lg"
+                class="w-full btn btn-primary btn-lg shadow-xl shadow-primary-500/20"
                 :disabled="isSubmitting || items.length === 0"
               >
-                <span v-if="isSubmitting" class="spinner mr-2" />
-                {{ isSubmitting ? 'Placing Order...' : 'Place Order' }}
+                <div v-if="isSubmitting" class="flex items-center justify-center gap-2">
+                   <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Processing Order...</span>
+                </div>
+                <span v-else>Confirm & Place Order</span>
               </button>
             </form>
           </div>
@@ -401,11 +426,12 @@ const indianStates = [
 <style scoped>
 .scale-enter-active,
 .scale-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .scale-enter-from,
 .scale-leave-to {
   opacity: 0;
+  transform: scale(0.95);
 }
 </style>

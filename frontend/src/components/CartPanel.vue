@@ -37,19 +37,21 @@ function proceedToCheckout() {
   <transition name="slide-right">
     <aside 
       v-if="isOpen"
-      class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
+      class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col font-sans"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between p-4 border-b border-surface-200">
-        <h2 class="text-lg font-display font-bold text-surface-900">
-          Shopping Cart
-          <span v-if="itemCount > 0" class="text-primary-600">({{ itemCount }})</span>
+      <div class="flex items-center justify-between p-6 border-b border-surface-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+        <h2 class="text-xl font-display font-bold text-surface-900 flex items-center gap-3">
+          Your Bag
+          <span v-if="itemCount > 0" class="flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold">
+            {{ itemCount }}
+          </span>
         </h2>
         <button 
-          class="w-10 h-10 rounded-full hover:bg-surface-100 flex items-center justify-center transition-colors"
+          class="w-8 h-8 rounded-full hover:bg-surface-100 flex items-center justify-center transition-colors text-surface-500 hover:text-surface-900"
           @click="closeCart"
         >
-          <svg class="w-5 h-5 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -60,142 +62,154 @@ function proceedToCheckout() {
         v-if="items.length === 0"
         class="flex-1 flex flex-col items-center justify-center p-8 text-center"
       >
-        <div class="w-24 h-24 rounded-full bg-surface-100 flex items-center justify-center mb-4">
-          <svg class="w-12 h-12 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-24 h-24 rounded-full bg-primary-50 flex items-center justify-center mb-6 animate-pulse-glow">
+          <svg class="w-10 h-10 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>
         </div>
-        <h3 class="text-lg font-semibold text-surface-900 mb-2">Your cart is empty</h3>
-        <p class="text-surface-500 mb-6">Looks like you haven't added any products yet.</p>
+        <h3 class="text-xl font-display font-bold text-surface-900 mb-2">Your cart is empty</h3>
+        <p class="text-surface-500 mb-8 max-w-[250px] mx-auto">Looks like you haven't discovered our premium collection yet.</p>
         <button 
           class="btn btn-primary"
           @click="closeCart(); router.push('/products')"
         >
-          Browse Products
+          Start Shopping
         </button>
       </div>
       
       <!-- Cart Items -->
-      <div v-else class="flex-1 overflow-y-auto p-4 space-y-4">
-        <div 
-          v-for="item in items" 
-          :key="item.product.id"
-          class="flex gap-4 p-3 bg-surface-50 rounded-xl"
-        >
-          <!-- Product Image -->
-          <div class="w-20 h-20 rounded-lg overflow-hidden bg-surface-200 shrink-0">
-            <img 
-              v-if="item.product.images?.[0]"
-              :src="item.product.images[0]"
-              :alt="item.product.name"
-              class="w-full h-full object-cover"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center">
-              <svg class="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+      <div v-else class="flex-1 overflow-y-auto p-6 space-y-6">
+        <transition-group name="list">
+          <div 
+            v-for="item in items" 
+            :key="item.product.id"
+            class="flex gap-4 group"
+          >
+            <!-- Product Image -->
+            <div class="w-24 h-24 rounded-xl overflow-hidden bg-surface-50 shrink-0 border border-surface-100 relative">
+              <img 
+                v-if="item.product.images?.[0]"
+                :src="item.product.images[0]"
+                :alt="item.product.name"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <svg class="w-8 h-8 text-surface-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
             </div>
-          </div>
-          
-          <!-- Product Details -->
-          <div class="flex-1 min-w-0">
-            <h4 class="font-medium text-surface-900 line-clamp-2 text-sm">
-              {{ item.product.name }}
-            </h4>
-            <p class="text-primary-700 font-bold mt-1">
-              {{ formatPrice(item.product.price) }}
-            </p>
             
-            <!-- Quantity Controls -->
-            <div class="flex items-center gap-2 mt-2">
-              <button 
-                class="w-8 h-8 rounded-full bg-white border border-surface-200 flex items-center justify-center hover:bg-surface-100 transition-colors"
-                @click="decrementQuantity(item.product.id)"
-              >
-                <svg class="w-4 h-4 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
-                </svg>
-              </button>
-              <span class="w-8 text-center font-medium text-surface-900">
-                {{ item.quantity }}
-              </span>
-              <button 
-                class="w-8 h-8 rounded-full bg-white border border-surface-200 flex items-center justify-center hover:bg-surface-100 transition-colors"
-                @click="incrementQuantity(item.product.id)"
-              >
-                <svg class="w-4 h-4 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </button>
+            <!-- Product Details -->
+            <div class="flex-1 min-w-0 flex flex-col justify-between py-1">
+              <div>
+                 <div class="flex justify-between items-start mb-1">
+                    <h4 class="font-display font-semibold text-surface-900 line-clamp-2 text-base leading-snug">
+                      {{ item.product.name }}
+                    </h4>
+                    <button 
+                      class="text-surface-400 hover:text-red-500 transition-colors p-1 -mr-2"
+                      @click="removeItem(item.product.id)"
+                      title="Remove Item"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                 </div>
+                 <p class="text-xs text-surface-500">{{ item.product.category || 'Wellness' }}</p>
+              </div>
               
-              <!-- Remove -->
-              <button 
-                class="ml-auto text-surface-400 hover:text-red-500 transition-colors"
-                @click="removeItem(item.product.id)"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
+              <div class="flex items-center justify-between mt-3">
+                 <!-- Quantity -->
+                 <div class="flex items-center gap-3 bg-surface-50 rounded-lg p-1 border border-surface-100">
+                    <button 
+                      class="w-6 h-6 rounded flex items-center justify-center hover:bg-white text-surface-500 hover:text-surface-900 transition-colors"
+                      @click="decrementQuantity(item.product.id)"
+                    >
+                      -
+                    </button>
+                    <span class="text-sm font-medium text-surface-900 w-4 text-center">
+                      {{ item.quantity }}
+                    </span>
+                    <button 
+                      class="w-6 h-6 rounded flex items-center justify-center hover:bg-white text-surface-500 hover:text-surface-900 transition-colors"
+                      @click="incrementQuantity(item.product.id)"
+                    >
+                      +
+                    </button>
+                 </div>
+
+                 <!-- Price -->
+                 <div class="text-right">
+                    <p class="text-primary-700 font-bold">
+                       {{ formatPrice(item.product.price * item.quantity) }}
+                    </p>
+                    <p v-if="item.quantity > 1" class="text-xs text-surface-400 text-right">
+                       {{ formatPrice(item.product.price) }} / each
+                    </p>
+                 </div>
+              </div>
             </div>
           </div>
-        </div>
+        </transition-group>
       </div>
       
       <!-- Footer -->
-      <div v-if="items.length > 0" class="p-4 border-t border-surface-200 bg-surface-50">
-        <!-- Savings -->
-        <div v-if="savings > 0" class="flex items-center justify-between text-sm mb-2">
-          <span class="text-green-600 font-medium">You're saving</span>
-          <span class="text-green-600 font-bold">{{ formatPrice(savings) }}</span>
-        </div>
-        
-        <!-- Subtotal -->
-        <div class="flex items-center justify-between text-sm mb-2">
-          <span class="text-surface-600">Subtotal</span>
-          <span class="font-medium text-surface-900">{{ formatPrice(subtotal) }}</span>
-        </div>
-        
-        <!-- Shipping -->
-        <div class="flex items-center justify-between text-sm mb-3">
-          <span class="text-surface-600">Shipping</span>
-          <span v-if="shippingFee === 0" class="text-green-600 font-medium">FREE</span>
-          <span v-else class="font-medium text-surface-900">{{ formatPrice(shippingFee) }}</span>
-        </div>
+      <div v-if="items.length > 0" class="p-6 border-t border-surface-100 bg-surface-50/50 backdrop-blur-sm">
         
         <!-- Free Shipping Progress -->
-        <div v-if="subtotal < 500" class="mb-4">
-          <div class="h-2 bg-surface-200 rounded-full overflow-hidden">
+        <div v-if="subtotal < 500" class="mb-6 p-4 rounded-xl bg-white border border-surface-100 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-surface-600">Free Shipping</span>
+            <span class="text-xs font-bold text-primary-600">{{ Math.min(Math.round((subtotal / 500) * 100), 100) }}%</span>
+          </div>
+          <div class="h-2 bg-surface-100 rounded-full overflow-hidden">
             <div 
-              class="h-full bg-primary-500 transition-all duration-300"
+              class="h-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-500 ease-out"
               :style="{ width: `${Math.min((subtotal / 500) * 100, 100)}%` }"
             />
           </div>
-          <p class="text-xs text-surface-500 mt-1">
-            Add {{ formatPrice(500 - subtotal) }} more for free shipping
+          <p class="text-xs text-surface-500 mt-2 flex items-center gap-1">
+            <svg class="w-3 h-3 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Add <span class="font-bold text-primary-700">{{ formatPrice(500 - subtotal) }}</span> to unlock free delivery.
           </p>
         </div>
-        
-        <!-- Total -->
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-lg font-bold text-surface-900">Total</span>
-          <span class="text-lg font-bold text-primary-700">{{ formatPrice(total) }}</span>
+        <div v-else class="mb-6 px-4 py-3 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center gap-2 text-green-700 text-sm font-bold">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+             Free Shipping Unlocked!
         </div>
+
+        <!-- Summary -->
+        <div class="space-y-3 mb-6">
+           <div class="flex items-center justify-between text-sm">
+              <span class="text-surface-600">Subtotal</span>
+              <span class="font-medium text-surface-900">{{ formatPrice(subtotal) }}</span>
+           </div>
+           <div class="flex items-center justify-between text-sm">
+              <span class="text-surface-600">Shipping</span>
+              <span v-if="shippingFee === 0" class="text-emerald-600 font-bold">Free</span>
+              <span v-else class="font-medium text-surface-900">{{ formatPrice(shippingFee) }}</span>
+           </div>
+           <div v-if="savings > 0" class="flex items-center justify-between text-sm text-emerald-600">
+             <span>Total Bundle Savings</span>
+             <span class="font-bold">-{{ formatPrice(savings) }}</span>
+           </div>
+           <div class="pt-4 mt-4 border-t border-surface-200 flex items-center justify-between">
+              <span class="font-display font-bold text-lg text-surface-900">Total</span>
+              <span class="font-display font-bold text-xl text-primary-700">{{ formatPrice(total) }}</span>
+           </div>
+        </div>
+
         
-        <!-- Checkout Button -->
         <button 
-          class="w-full btn btn-primary btn-lg"
+          class="w-full btn btn-primary btn-lg shadow-lg shadow-primary-500/20 group flex items-center justify-center gap-2"
           @click="proceedToCheckout"
         >
-          Proceed to Checkout
-        </button>
-        
-        <!-- Continue Shopping -->
-        <button 
-          class="w-full btn btn-ghost mt-2"
-          @click="closeCart"
-        >
-          Continue Shopping
+          <span>Checkout Securely</span>
+          <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+          </svg>
         </button>
       </div>
     </aside>
@@ -205,11 +219,21 @@ function proceedToCheckout() {
 <style scoped>
 .slide-right-enter-active,
 .slide-right-leave-active {
-  transition: transform 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .slide-right-enter-from,
 .slide-right-leave-to {
   transform: translateX(100%);
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
 }
 </style>

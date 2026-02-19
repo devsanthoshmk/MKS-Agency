@@ -37,19 +37,21 @@ function viewProduct(slug) {
   <transition name="slide-right">
     <aside 
       v-if="isOpen"
-      class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
+      class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col font-sans"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between p-4 border-b border-surface-200">
-        <h2 class="text-lg font-display font-bold text-surface-900">
-          Wishlist
-          <span v-if="itemCount > 0" class="text-primary-600">({{ itemCount }})</span>
+      <div class="flex items-center justify-between p-6 border-b border-surface-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+        <h2 class="text-xl font-display font-bold text-surface-900 flex items-center gap-3">
+          Your Wishlist
+          <span v-if="itemCount > 0" class="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+            {{ itemCount }}
+          </span>
         </h2>
         <button 
-          class="w-10 h-10 rounded-full hover:bg-surface-100 flex items-center justify-center transition-colors"
+          class="w-8 h-8 rounded-full hover:bg-surface-100 flex items-center justify-center transition-colors text-surface-500 hover:text-surface-900"
           @click="closeWishlist"
         >
-          <svg class="w-5 h-5 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -60,102 +62,91 @@ function viewProduct(slug) {
         v-if="items.length === 0"
         class="flex-1 flex flex-col items-center justify-center p-8 text-center"
       >
-        <div class="w-24 h-24 rounded-full bg-surface-100 flex items-center justify-center mb-4">
-          <svg class="w-12 h-12 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-24 h-24 rounded-full bg-surface-50 flex items-center justify-center mb-6 animate-pulse">
+           <svg class="w-10 h-10 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
         </div>
-        <h3 class="text-lg font-semibold text-surface-900 mb-2">Your wishlist is empty</h3>
-        <p class="text-surface-500 mb-6">Save your favorite products here for later.</p>
+        <h3 class="text-xl font-display font-bold text-surface-900 mb-2">Your wishlist is empty</h3>
+        <p class="text-surface-500 mb-8 max-w-[250px] mx-auto">Save items you love and come back to them later.</p>
         <button 
           class="btn btn-primary"
           @click="closeWishlist(); router.push('/products')"
         >
-          Explore Products
+          Explore Collection
         </button>
       </div>
       
       <!-- Wishlist Items -->
-      <div v-else class="flex-1 overflow-y-auto p-4 space-y-4">
-        <div 
-          v-for="item in items" 
-          :key="item.id"
-          class="flex gap-4 p-3 bg-surface-50 rounded-xl"
-        >
-          <!-- Product Image -->
+      <div v-else class="flex-1 overflow-y-auto p-6 space-y-6">
+        <transition-group name="list">
           <div 
-            class="w-24 h-24 rounded-lg overflow-hidden bg-surface-200 shrink-0 cursor-pointer"
-            @click="viewProduct(item.slug)"
+            v-for="item in items" 
+            :key="item.id"
+            class="flex gap-4 group"
           >
-            <img 
-              v-if="item.images?.[0]"
-              :src="item.images[0]"
-              :alt="item.name"
-              class="w-full h-full object-cover hover:scale-105 transition-transform"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center">
-              <svg class="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-          </div>
-          
-          <!-- Product Details -->
-          <div class="flex-1 min-w-0">
-            <h4 
-              class="font-medium text-surface-900 line-clamp-2 text-sm cursor-pointer hover:text-primary-600 transition-colors"
+            <!-- Product Image -->
+            <div 
+              class="w-24 h-24 rounded-xl overflow-hidden bg-surface-50 shrink-0 border border-surface-100 relative cursor-pointer"
               @click="viewProduct(item.slug)"
             >
-              {{ item.name }}
-            </h4>
-            
-            <!-- Price -->
-            <div class="flex items-center gap-2 mt-1">
-              <span class="text-primary-700 font-bold">{{ formatPrice(item.price) }}</span>
-              <span 
-                v-if="item.comparePrice && item.comparePrice > item.price"
-                class="text-xs text-surface-400 line-through"
-              >
-                {{ formatPrice(item.comparePrice) }}
-              </span>
-            </div>
-            
-            <!-- Stock Status -->
-            <p 
-              class="text-xs mt-1"
-              :class="(item.stock === undefined || item.stock > 0) ? 'text-green-600' : 'text-red-500'"
-            >
-              {{ (item.stock === undefined || item.stock > 0) ? 'In Stock' : 'Out of Stock' }}
-            </p>
-            
-            <!-- Actions -->
-            <div class="flex items-center gap-2 mt-3">
-              <button 
-                v-if="item.stock === undefined || item.stock > 0"
-                class="btn btn-primary btn-sm flex-1"
-                @click="moveToCart(item)"
-              >
-                Add to Cart
-              </button>
-              <button 
-                v-if="item.stock === undefined || item.stock > 0"
-                class="btn btn-secondary btn-sm"
-                @click="buyNow(item)"
-              >
-                Buy Now
-              </button>
-              <button 
-                class="w-8 h-8 rounded-full hover:bg-surface-200 flex items-center justify-center transition-colors"
-                @click="removeItem(item.id)"
+              <img 
+                v-if="item.images?.[0]"
+                :src="item.images[0]"
+                :alt="item.name"
+                class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <svg class="w-8 h-8 text-surface-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+               <!-- Remove Button (Absolute) -->
+               <button 
+                class="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:text-red-500 shadow-sm"
+                @click.stop="removeItem(item.id)"
                 title="Remove"
               >
-                <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
+            
+            <!-- Product Details -->
+            <div class="flex-1 min-w-0 flex flex-col justify-between py-1">
+              <div>
+                <h4 
+                  class="font-display font-semibold text-surface-900 line-clamp-2 text-base leading-snug cursor-pointer hover:text-primary-600 transition-colors"
+                  @click="viewProduct(item.slug)"
+                >
+                  {{ item.name }}
+                </h4>
+                 <div class="flex items-center gap-2 mt-1">
+                    <span class="text-primary-700 font-bold">{{ formatPrice(item.price) }}</span>
+                    <span 
+                        v-if="item.comparePrice && item.comparePrice > item.price"
+                        class="text-xs text-surface-400 line-through"
+                    >
+                        {{ formatPrice(item.comparePrice) }}
+                    </span>
+                 </div>
+              </div>
+              
+               <div class="mt-3">
+                 <!-- Actions -->
+                 <div class="flex gap-2">
+                    <button 
+                        class="btn btn-primary btn-sm flex-1 text-xs"
+                        @click="moveToCart(item)"
+                    >
+                        Move to Cart
+                    </button>
+                 </div>
+               </div>
+            </div>
           </div>
-        </div>
+        </transition-group>
       </div>
     </aside>
   </transition>
@@ -164,11 +155,21 @@ function viewProduct(slug) {
 <style scoped>
 .slide-right-enter-active,
 .slide-right-leave-active {
-  transition: transform 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .slide-right-enter-from,
 .slide-right-leave-to {
   transform: translateX(100%);
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
 }
 </style>
