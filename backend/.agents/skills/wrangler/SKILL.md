@@ -15,7 +15,7 @@ wrangler --version  # Requires v4.x+
 
 If not installed:
 ```bash
-npm install -D wrangler@latest
+pnpm install -D wrangler@latest
 ```
 
 ## Key Guidelines
@@ -817,7 +817,7 @@ wrangler tail --format json
 ### Local Testing with Vitest
 
 ```bash
-npm install -D @cloudflare/vitest-pool-workers vitest
+pnpm install -D @cloudflare/vitest-pool-workers vitest
 ```
 
 `vitest.config.ts`:
@@ -853,7 +853,7 @@ curl http://localhost:8787/__scheduled
 
 | Issue | Solution |
 |-------|----------|
-| `command not found: wrangler` | Install: `npm install -D wrangler` |
+| `command not found: wrangler` | Install: `pnpm install -D wrangler` |
 | Auth errors | Run `wrangler login` |
 | Config validation errors | Run `wrangler check` |
 | Type errors after config change | Run `wrangler types` |

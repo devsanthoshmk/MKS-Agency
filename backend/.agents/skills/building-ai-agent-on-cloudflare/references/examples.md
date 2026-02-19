@@ -9,7 +9,7 @@ Instructions for creating new agent projects.
 Execute in terminal to generate a new project:
 
 ```bash
-npm create cloudflare@latest -- my-agent \
+pnpm create cloudflare@latest -- my-agent \
   --template=cloudflare/agents-starter
 ```
 
@@ -125,8 +125,8 @@ Browse each folder for complete implementation code and wrangler configuration.
 
 ```bash
 cd my-agent
-npm install
-npm start
+pnpm install
+pnpm start
 # Accessible at http://localhost:8787
 ```
 

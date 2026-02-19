@@ -9,7 +9,7 @@ See the [official TypeScript SDK docs](https://neon.com/docs/reference/typescrip
 ## Installation
 
 ```bash
-npm install @neondatabase/api-client
+pnpm install @neondatabase/api-client
 ```
 
 ## Authentication

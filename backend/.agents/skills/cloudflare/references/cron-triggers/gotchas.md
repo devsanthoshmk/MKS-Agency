@@ -63,7 +63,7 @@ curl "http://localhost:8787/__scheduled?cron=*/5 * * * *"
 
 4. Update Wrangler if outdated:
 ```bash
-npm install -g wrangler@latest
+pnpm install -g wrangler@latest
 ```
 
 ### "waitUntil() Tasks Not Completing"

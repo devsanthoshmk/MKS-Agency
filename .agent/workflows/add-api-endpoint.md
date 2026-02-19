@@ -73,7 +73,7 @@ async function handleYourEndpoint(request, env) {
 ```
 
 ## 4. Constraints Checklist
-- [ ] No new npm dependencies added (keep bundle < 1MB)
+- [ ] No new pnpm dependencies added (keep bundle < 1MB)
 - [ ] No Node.js APIs used (Web APIs only)
 - [ ] CORS headers on every response (including errors)
 - [ ] Input validated before any processing

@@ -12,7 +12,7 @@ Fetch the latest `@cloudflare/workers-types` before reviewing. The project may h
 
 ```bash
 mkdir -p /tmp/workers-types-latest && \
-  npm pack @cloudflare/workers-types --pack-destination /tmp/workers-types-latest && \
+  pnpm pack @cloudflare/workers-types --pack-destination /tmp/workers-types-latest && \
   tar -xzf /tmp/workers-types-latest/cloudflare-workers-types-*.tgz -C /tmp/workers-types-latest
 # Types are at /tmp/workers-types-latest/package/index.d.ts
 ```

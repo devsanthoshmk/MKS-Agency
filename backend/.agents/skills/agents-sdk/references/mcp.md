@@ -78,7 +78,7 @@ Use `McpAgent` from the SDK to create an MCP server.
 
 **Install dependencies:**
 ```bash
-npm install @modelcontextprotocol/sdk zod
+pnpm install @modelcontextprotocol/sdk zod
 ```
 
 **Wrangler config:**

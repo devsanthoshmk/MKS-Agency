@@ -337,7 +337,7 @@ wrangler tail --format pretty
 ### Test Locally First
 
 ```bash
-npm start
+pnpm start
 # Connect with test client or use browser console:
 # new WebSocket("ws://localhost:8787/agent/test")
 ```

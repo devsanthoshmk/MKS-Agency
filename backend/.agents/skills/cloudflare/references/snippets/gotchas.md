@@ -83,4 +83,4 @@ curl -H "X-Test: true" https://example.com -v
 | fetch() | 1-3ms |
 | SHA-256 | 0.5-1ms |
 
-**Migrate to Workers when:** >5ms needed, >5 subrequests, need storage (KV/D1/R2), need npm packages, >32KB code
+**Migrate to Workers when:** >5ms needed, >5 subrequests, need storage (KV/D1/R2), need pnpm packages, >32KB code

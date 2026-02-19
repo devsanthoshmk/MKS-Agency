@@ -95,7 +95,7 @@ cd ../target-worker && npx wrangler deploy
 ### Missing @cloudflare/workers-types
 
 **Error:** `Cannot find name 'Request'`  
-**Solution:** `npm install -D @cloudflare/workers-types`, add to tsconfig.json `"types"`
+**Solution:** `pnpm install -D @cloudflare/workers-types`, add to tsconfig.json `"types"`
 
 ### Binding Type Mismatches
 

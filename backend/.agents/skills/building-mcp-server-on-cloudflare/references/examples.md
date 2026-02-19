@@ -11,21 +11,21 @@ Execute in terminal to generate a new project:
 **Without authentication:**
 
 ```bash
-npm create cloudflare@latest -- my-mcp-server \
+pnpm create cloudflare@latest -- my-mcp-server \
   --template=cloudflare/ai/demos/remote-mcp-authless
 ```
 
 **With GitHub login:**
 
 ```bash
-npm create cloudflare@latest -- my-mcp-server \
+pnpm create cloudflare@latest -- my-mcp-server \
   --template=cloudflare/ai/demos/remote-mcp-github-oauth
 ```
 
 **With Google login:**
 
 ```bash
-npm create cloudflare@latest -- my-mcp-server \
+pnpm create cloudflare@latest -- my-mcp-server \
   --template=cloudflare/ai/demos/remote-mcp-google-oauth
 ```
 
@@ -74,8 +74,8 @@ Other authentication providers:
 
 ```bash
 cd my-mcp-server
-npm install
-npm start
+pnpm install
+pnpm start
 # Accessible at http://localhost:8788/mcp
 ```
 

@@ -12,7 +12,7 @@ import { RtkMeeting } from '@cloudflare/realtimekit-react-ui';
 export class AppComponent { authToken = '<token>'; onLeave(event: unknown) {} }
 
 // HTML/Web Components
-<script type="module" src="https://cdn.jsdelivr.net/npm/@cloudflare/realtimekit-ui/dist/realtimekit-ui/realtimekit-ui.esm.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/pnpm/@cloudflare/realtimekit-ui/dist/realtimekit-ui/realtimekit-ui.esm.js"></script>
 <rtk-meeting id="meeting"></rtk-meeting>
 <script>document.getElementById('meeting').authToken = '<token>';</script>
 ```

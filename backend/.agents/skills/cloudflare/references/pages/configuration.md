@@ -173,7 +173,7 @@ npx wrangler pages dev ./dist --remote
 npx wrangler pages dev ./dist --persist-to=./.wrangler/state/v3
 
 # Proxy mode (SSR frameworks)
-npx wrangler pages dev -- npm run dev
+npx wrangler pages dev -- pnpm run dev
 ```
 
 ## Limits (as of Jan 2026)

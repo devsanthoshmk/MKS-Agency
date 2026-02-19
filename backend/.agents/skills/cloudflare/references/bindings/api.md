@@ -98,7 +98,7 @@ addEventListener('fetch', (event) => {
 
 ```bash
 # Install wrangler
-npm install -D wrangler
+pnpm install -D wrangler
 
 # Generate types from wrangler.jsonc
 npx wrangler types
@@ -165,12 +165,12 @@ await stub.fetch(new Request('https://fake/increment'));
 
 | Type Source | When Generated | Use Case |
 |-------------|----------------|----------|
-| `@cloudflare/workers-types` | npm install | Base Workers APIs (Request, Response, etc.) |
+| `@cloudflare/workers-types` | pnpm install | Base Workers APIs (Request, Response, etc.) |
 | `wrangler types` | After config change | Your specific bindings (Env interface) |
 
 **Install both:**
 ```bash
-npm install -D @cloudflare/workers-types
+pnpm install -D @cloudflare/workers-types
 npx wrangler types
 ```
 
@@ -199,5 +199,5 @@ cat .wrangler/types/runtime.d.ts
 
 ## See Also
 
-- [Workers Types Package](https://www.npmjs.com/package/@cloudflare/workers-types)
+- [Workers Types Package](https://www.pnpmjs.com/package/@cloudflare/workers-types)
 - [Wrangler Types Command](https://developers.cloudflare.com/workers/wrangler/commands/#types)

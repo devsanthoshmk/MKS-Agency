@@ -16,13 +16,13 @@ Both packages share auth exports (`@neondatabase/neon-js/auth/*` re-exports `@ne
 
 ```bash
 # Next.js
-npm install @neondatabase/auth@latest
+pnpm install @neondatabase/auth@latest
 
 # React SPA / Full SDK
-npm install @neondatabase/neon-js@latest
+pnpm install @neondatabase/neon-js@latest
 ```
 
-> **Note:** While these packages are in pre-release (beta), you must use `@latest` with npm. Without it, npm may install an older version. This is not needed with pnpm or yarn.
+> **Note:** While these packages are in pre-release (beta), you must use `@latest` with pnpm. Without it, pnpm may install an older version. This is not needed with pnpm or yarn.
 
 ## Next.js Setup
 

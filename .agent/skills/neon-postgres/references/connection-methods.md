@@ -162,7 +162,7 @@ Then provide:
 
 - The recommended driver/package
 - A working code example for their setup
-- The correct npm install command
+- The correct pnpm install command
 
 ---
 

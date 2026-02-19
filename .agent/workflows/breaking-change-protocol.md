@@ -10,7 +10,7 @@ This workflow MUST be followed whenever a potential breaking change is identifie
 Is this a breaking change? Check this list:
 - **Schema**: Adding required fields, removing fields, renaming tables/fields in Convex?
 - **API**: Changing route paths, request/response shapes, auth requirements (JWT claims, OAuth flow)?
-- **Dependencies**: Adding new npm packages (size impact!), upgrading major versions?
+- **Dependencies**: Adding new pnpm packages (size impact!), upgrading major versions?
 - **Config**: Changing `wrangler.jsonc`, KV namespaces, environment variable names?
 - **Build**: Changing Vite config, build commands, deployment targets?
 - **Order Flow**: Adding/removing/renaming order statuses (`PENDING_VERIFICATION`, `PAYMENT_VERIFIED`, etc.)?

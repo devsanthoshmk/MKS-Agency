@@ -106,7 +106,7 @@ interface Env {
 ## TypeScript Setup
 
 ```bash
-npm install --save-dev @cloudflare/workers-types
+pnpm install --save-dev @cloudflare/workers-types
 ```
 
 ```json
@@ -136,7 +136,7 @@ export default {
 ## Dependencies
 
 ```bash
-npm install postal-mime
+pnpm install postal-mime
 ```
 
 ```typescript
@@ -179,7 +179,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
-      - run: npm ci
+      - run: pnpm ci
       - run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -7,8 +7,8 @@ See the [official serverless driver docs](https://neon.com/docs/serverless/serve
 ## Installation
 
 ```bash
-# Using npm
-npm install @neondatabase/serverless
+# Using pnpm
+pnpm install @neondatabase/serverless
 
 # Using JSR
 bunx jsr add @neon/serverless
@@ -20,10 +20,10 @@ For projects that depend on `pg` but want to use Neon's WebSocket-based connecti
 
 ```json
 "dependencies": {
-  "pg": "npm:@neondatabase/serverless@^0.10.4"
+  "pg": "pnpm:@neondatabase/serverless@^0.10.4"
 },
 "overrides": {
-  "pg": "npm:@neondatabase/serverless@^0.10.4"
+  "pg": "pnpm:@neondatabase/serverless@^0.10.4"
 }
 ```
 

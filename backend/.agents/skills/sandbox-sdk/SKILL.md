@@ -10,7 +10,7 @@ Build secure, isolated code execution environments on Cloudflare Workers.
 ## FIRST: Verify Installation
 
 ```bash
-npm install @cloudflare/sandbox
+pnpm install @cloudflare/sandbox
 docker info  # Must succeed - Docker required for local dev
 ```
 
@@ -124,7 +124,7 @@ FROM docker.io/cloudflare/sandbox:0.7.0
 RUN pip install requests beautifulsoup4
 
 # Node packages (global)
-RUN npm install -g typescript
+RUN pnpm install -g typescript
 
 # System packages
 RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*

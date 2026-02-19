@@ -17,10 +17,10 @@ See the [official JavaScript SDK docs](https://neon.com/docs/reference/javascrip
 ## Installation
 
 ```bash
-npm install @neondatabase/neon-js@latest
+pnpm install @neondatabase/neon-js@latest
 ```
 
-> **Note:** While this package is in pre-release (beta), you must use `@latest` with npm. Without it, npm may install an older version. This is not needed with pnpm or yarn.
+> **Note:** While this package is in pre-release (beta), you must use `@latest` with pnpm. Without it, pnpm may install an older version. This is not needed with pnpm or yarn.
 
 ## Quick Setup Patterns
 

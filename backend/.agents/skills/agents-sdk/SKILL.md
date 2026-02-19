@@ -45,12 +45,12 @@ The Agents SDK provides:
 ## FIRST: Verify Installation
 
 ```bash
-npm ls agents  # Should show agents package
+pnpm ls agents  # Should show agents package
 ```
 
 If not installed:
 ```bash
-npm install agents
+pnpm install agents
 ```
 
 ## Wrangler Configuration

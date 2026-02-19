@@ -265,7 +265,7 @@ new_classes = ["NewClassName"]
 ```bash
 # Clear cache and rebuild
 rm -rf node_modules .wrangler
-npm install
+pnpm install
 wrangler deploy
 ```
 
@@ -297,7 +297,7 @@ wrangler tail --format pretty
 ### Test Locally First
 
 ```bash
-npm start
+pnpm start
 npx @modelcontextprotocol/inspector@latest
 ```
 

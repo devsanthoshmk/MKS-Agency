@@ -104,7 +104,7 @@ Bindings without IDs are auto-created:
 ### Automatic Type Generation (Recommended)
 
 ```bash
-npm install -D @cloudflare/workers-types
+pnpm install -D @cloudflare/workers-types
 npx wrangler types  # Generates .wrangler/types/runtime.d.ts from wrangler.jsonc
 ```
 

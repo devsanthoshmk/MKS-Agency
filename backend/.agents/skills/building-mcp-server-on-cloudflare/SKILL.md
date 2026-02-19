@@ -24,18 +24,18 @@ Creates production-ready Model Context Protocol servers on Cloudflare Workers wi
 ## Prerequisites
 
 - Cloudflare account with Workers enabled
-- Node.js 18+ and npm/pnpm/yarn
-- Wrangler CLI (`npm install -g wrangler`)
+- Node.js 18+ and pnpm/pnpm/yarn
+- Wrangler CLI (`pnpm install -g wrangler`)
 
 ## Quick Start
 
 ### Option 1: Public Server (No Auth)
 
 ```bash
-npm create cloudflare@latest -- my-mcp-server \
+pnpm create cloudflare@latest -- my-mcp-server \
   --template=cloudflare/ai/demos/remote-mcp-authless
 cd my-mcp-server
-npm start
+pnpm start
 ```
 
 Server runs at `http://localhost:8788/mcp`
@@ -43,7 +43,7 @@ Server runs at `http://localhost:8788/mcp`
 ### Option 2: Authenticated Server (OAuth)
 
 ```bash
-npm create cloudflare@latest -- my-mcp-server \
+pnpm create cloudflare@latest -- my-mcp-server \
   --template=cloudflare/ai/demos/remote-mcp-github-oauth
 cd my-mcp-server
 ```
@@ -115,7 +115,7 @@ export { MyMCP };
 
 ```bash
 # Start server
-npm start
+pnpm start
 
 # In another terminal, test with MCP Inspector
 npx @modelcontextprotocol/inspector@latest

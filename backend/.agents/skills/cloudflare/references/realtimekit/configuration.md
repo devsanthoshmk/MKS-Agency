@@ -6,17 +6,17 @@ Configuration guide for RealtimeKit setup, client SDKs, and wrangler integration
 
 ### React
 ```bash
-npm install @cloudflare/realtimekit @cloudflare/realtimekit-react-ui
+pnpm install @cloudflare/realtimekit @cloudflare/realtimekit-react-ui
 ```
 
 ### Angular
 ```bash
-npm install @cloudflare/realtimekit @cloudflare/realtimekit-angular-ui
+pnpm install @cloudflare/realtimekit @cloudflare/realtimekit-angular-ui
 ```
 
 ### Web Components/HTML
 ```bash
-npm install @cloudflare/realtimekit @cloudflare/realtimekit-ui
+pnpm install @cloudflare/realtimekit @cloudflare/realtimekit-ui
 ```
 
 ## Client SDK Configuration
@@ -35,7 +35,7 @@ export class AppComponent { authToken = '<token>'; onLeave() {} }
 
 ### Web Components
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/npm/@cloudflare/realtimekit-ui/dist/realtimekit-ui/realtimekit-ui.esm.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/pnpm/@cloudflare/realtimekit-ui/dist/realtimekit-ui/realtimekit-ui.esm.js"></script>
 <rtk-meeting id="meeting"></rtk-meeting>
 <script>
   document.getElementById('meeting').authToken = '<token>';

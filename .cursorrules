@@ -70,7 +70,7 @@ PENDING_VERIFICATION → PAYMENT_VERIFIED → PROCESSING → SHIPPED → DELIVER
 2. **Modifying order status flow** or adding/removing status values
 3. **Changing authentication logic** — Google OAuth flow, JWT structure, magic links
 4. **Altering API route paths** — frontend depends on exact routes
-5. **Adding new npm dependencies** — every byte counts on Workers (1MB limit) and Pages
+5. **Adding new pnpm dependencies** — every byte counts on Workers (1MB limit) and Pages
 6. **Changing the database provider** or adding a secondary database
 7. **Modifying CORS configuration** — breaks cross-origin communication
 8. **Changing the admin authentication mechanism** (passcode → ADMIN_SECRETS KV → JWT)

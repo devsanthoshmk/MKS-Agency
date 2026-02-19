@@ -27,7 +27,7 @@ Before writing new code, verify:
 - [ ] No `.collect()` without `.take(N)` or index filtering
 - [ ] All Convex queries use indexes (no full table scans)
 - [ ] No unnecessary API calls (check if data can be cached or batched)
-- [ ] No new heavy npm dependencies (Workers bundle < 1MB)
+- [ ] No new heavy pnpm dependencies (Workers bundle < 1MB)
 - [ ] No polling — use Convex real-time subscriptions on frontend
 - [ ] GitHub API calls cached in KV with TTL
 
@@ -51,7 +51,7 @@ If ANY of these apply, STOP and follow the `breaking-change-protocol` workflow:
 - Schema change to `frontend/convex/schema.ts`
 - API route path modified
 - JWT claims or token format changed
-- New npm dependency added
+- New pnpm dependency added
 - Order status values modified
 - wrangler.jsonc bindings changed
 

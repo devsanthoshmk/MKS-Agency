@@ -43,7 +43,7 @@ export default {
 
 **Setup:**
 ```bash
-npm install -D @cloudflare/workers-types
+pnpm install -D @cloudflare/workers-types
 ```
 
 ```json

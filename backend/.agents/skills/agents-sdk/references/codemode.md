@@ -76,7 +76,7 @@ export const globalOutbound = {
 ### 3. Install Dependencies
 
 ```bash
-npm install @cloudflare/codemode ai @ai-sdk/openai zod
+pnpm install @cloudflare/codemode ai @ai-sdk/openai zod
 ```
 
 ### 4. Use Code Mode in Agent

@@ -24,8 +24,8 @@ Drizzle ORM works with multiple Postgres drivers. See `connection-methods.md` fo
 Best for Railway, Render, traditional VPS.
 
 ```bash
-npm install drizzle-orm pg
-npm install -D drizzle-kit @types/pg dotenv
+pnpm install drizzle-orm pg
+pnpm install -D drizzle-kit @types/pg dotenv
 ```
 
 ```typescript
@@ -40,8 +40,8 @@ export const db = drizzle({ client: pool });
 ### 2. Vercel Fluid Compute with Connection Pooling
 
 ```bash
-npm install drizzle-orm pg @vercel/functions
-npm install -D drizzle-kit @types/pg
+pnpm install drizzle-orm pg @vercel/functions
+pnpm install -D drizzle-kit @types/pg
 ```
 
 ```typescript
@@ -62,8 +62,8 @@ export const db = drizzle({ client: pool, schema });
 For Cloudflare Workers, Netlify Edge, Deno Deploy. Does NOT support interactive transactions.
 
 ```bash
-npm install drizzle-orm @neondatabase/serverless
-npm install -D drizzle-kit dotenv
+pnpm install drizzle-orm @neondatabase/serverless
+pnpm install -D drizzle-kit dotenv
 ```
 
 ```typescript
@@ -78,8 +78,8 @@ export const db = drizzle(sql);
 ### 4. WebSocket Adapter (Edge with Transactions)
 
 ```bash
-npm install drizzle-orm @neondatabase/serverless ws
-npm install -D drizzle-kit dotenv @types/ws
+pnpm install drizzle-orm @neondatabase/serverless ws
+pnpm install -D drizzle-kit dotenv @types/ws
 ```
 
 ```typescript

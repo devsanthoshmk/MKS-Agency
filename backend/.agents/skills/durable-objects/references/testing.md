@@ -7,7 +7,7 @@ Use `@cloudflare/vitest-pool-workers` to test DOs inside the Workers runtime.
 ### Install Dependencies
 
 ```bash
-npm i -D vitest@~3.2.0 @cloudflare/vitest-pool-workers
+pnpm i -D vitest@~3.2.0 @cloudflare/vitest-pool-workers
 ```
 
 ### vitest.config.ts

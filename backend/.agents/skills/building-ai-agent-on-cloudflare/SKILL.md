@@ -25,15 +25,15 @@ Creates AI-powered agents using Cloudflare's Agents SDK with persistent state, r
 ## Prerequisites
 
 - Cloudflare account with Workers enabled
-- Node.js 18+ and npm/pnpm/yarn
-- Wrangler CLI (`npm install -g wrangler`)
+- Node.js 18+ and pnpm/pnpm/yarn
+- Wrangler CLI (`pnpm install -g wrangler`)
 
 ## Quick Start
 
 ```bash
-npm create cloudflare@latest -- my-agent --template=cloudflare/agents-starter
+pnpm create cloudflare@latest -- my-agent --template=cloudflare/agents-starter
 cd my-agent
-npm start
+pnpm start
 ```
 
 Agent runs at `http://localhost:8787`

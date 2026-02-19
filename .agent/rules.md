@@ -20,7 +20,7 @@
 2. Modifying order status flow values
 3. Changing authentication logic (OAuth, JWT, magic links)
 4. Altering API route paths
-5. Adding ANY new npm dependency (Workers has **1MB limit**)
+5. Adding ANY new pnpm dependency (Workers has **1MB limit**)
 6. Changing database provider
 7. Modifying CORS configuration
 8. Changing admin auth mechanism

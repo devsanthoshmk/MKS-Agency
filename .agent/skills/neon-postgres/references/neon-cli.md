@@ -10,10 +10,10 @@ The Neon CLI is a command-line interface for managing Neon Serverless Postgres d
 brew install neonctl
 ```
 
-**npm (cross-platform):**
+**pnpm (cross-platform):**
 
 ```bash
-npm install -g neonctl
+pnpm install -g neonctl
 ```
 
 ## Authentication
