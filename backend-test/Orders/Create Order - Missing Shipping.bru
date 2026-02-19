@@ -1,0 +1,40 @@
+meta {
+  name: Create Order - Missing Shipping Info
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "items": [
+      {
+        "id": "prod_test_001",
+        "name": "Test Product",
+        "price": 999,
+        "quantity": 1
+      }
+    ],
+    "shipping": {
+      "name": "Santhosh MK"
+    },
+    "subtotal": 999,
+    "shippingFee": 99,
+    "total": 1098
+  }
+}
+
+tests {
+  expect(res.status).to.equal(400)
+  expect(res.body).to.have.property("error")
+}

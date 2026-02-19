@@ -1,0 +1,21 @@
+meta {
+  name: Get Cart
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/cart
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body).to.have.property("cart")
+  expect(res.body.cart).to.be.an("array")
+}

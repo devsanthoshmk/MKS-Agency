@@ -1,0 +1,41 @@
+meta {
+  name: Create Product (Admin)
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{base_url}}/api/admin/products
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{admin_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "action": "create",
+    "product": {
+      "slug": "test-product-001",
+      "name": "Test Product",
+      "description": "A test product for API testing",
+      "shortDescription": "Test product",
+      "price": 999,
+      "comparePrice": 1499,
+      "category": "skincare",
+      "stock": 50,
+      "isActive": true,
+      "tags": ["test", "sample"],
+      "images": ["https://example.com/image.jpg"]
+    }
+  }
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body.success).to.equal(true)
+  expect(res.body.action).to.equal("created")
+}

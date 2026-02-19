@@ -1,0 +1,20 @@
+meta {
+  name: Clear Cart (POST)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/api/cart/clear
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body.success).to.equal(true)
+}

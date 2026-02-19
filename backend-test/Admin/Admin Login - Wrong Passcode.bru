@@ -1,0 +1,26 @@
+meta {
+  name: Admin Login - Wrong Passcode
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/admin/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "passcode": "wrongpasscode123"
+  }
+}
+
+tests {
+  expect(res.status).to.equal(401)
+  expect(res.body).to.have.property("error")
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Get My Orders - Unauthorized
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/api/orders
+  body: none
+  auth: none
+}
+
+tests {
+  expect(res.status).to.equal(401)
+  expect(res.body).to.have.property("error")
+}

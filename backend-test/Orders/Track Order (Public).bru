@@ -1,0 +1,22 @@
+meta {
+  name: Track Order by Number (Public)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{base_url}}/api/orders/track/{{order_number}}
+  body: none
+  auth: none
+}
+
+tests {
+  expect(res.status).to.be.oneOf([200, 404])
+  if (res.status === 200) {
+    expect(res.body).to.have.property("orderNumber")
+    expect(res.body).to.have.property("status")
+    expect(res.body).to.have.property("createdAt")
+  } else {
+    expect(res.body).to.have.property("error")
+  }
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Get Wishlist - Unauthorized
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/wishlist
+  body: none
+  auth: none
+}
+
+tests {
+  expect(res.status).to.equal(401)
+  expect(res.body).to.have.property("error")
+}

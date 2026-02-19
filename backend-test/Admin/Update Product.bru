@@ -1,0 +1,34 @@
+meta {
+  name: Update Product (Admin)
+  type: http
+  seq: 10
+}
+
+put {
+  url: {{base_url}}/api/admin/products
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{admin_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "action": "update",
+    "product": {
+      "_id": "{{product_convex_id}}",
+      "name": "Updated Test Product",
+      "price": 899,
+      "stock": 30
+    }
+  }
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body.success).to.equal(true)
+  expect(res.body.action).to.equal("updated")
+}

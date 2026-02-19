@@ -1,0 +1,27 @@
+meta {
+  name: Update Order Status - Invalid Status (Admin)
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{base_url}}/api/admin/orders/{{order_id}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{admin_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "INVALID_STATUS"
+  }
+}
+
+tests {
+  expect(res.status).to.equal(400)
+  expect(res.body).to.have.property("error")
+}

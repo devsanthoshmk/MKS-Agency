@@ -1,0 +1,21 @@
+meta {
+  name: Verify JWT Token
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/api/auth/verify
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body.valid).to.equal(true)
+  expect(res.body).to.have.property("user")
+}

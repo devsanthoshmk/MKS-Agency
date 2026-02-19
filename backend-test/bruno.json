@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "MKS-Agency",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

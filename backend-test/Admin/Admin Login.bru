@@ -1,0 +1,36 @@
+meta {
+  name: Admin Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/admin/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "passcode": "{{admin_passcode}}"
+  }
+}
+
+vars:pre-request {
+  admin_passcode: mksagencies-admin
+}
+
+vars:post-response {
+  admin_token: res.body.token
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body.success).to.equal(true)
+  expect(res.body).to.have.property("token")
+  expect(res.body.token).to.be.a("string")
+}

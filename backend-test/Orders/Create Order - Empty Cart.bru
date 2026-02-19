@@ -1,0 +1,36 @@
+meta {
+  name: Create Order - Empty Cart
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "items": [],
+    "shipping": {
+      "name": "Santhosh MK",
+      "phone": "9876543210",
+      "email": "santhosh@example.com",
+      "address": "123, Test Street"
+    },
+    "subtotal": 0,
+    "shippingFee": 0,
+    "total": 0
+  }
+}
+
+tests {
+  expect(res.status).to.equal(400)
+  expect(res.body).to.have.property("error")
+}

@@ -1,0 +1,50 @@
+meta {
+  name: Sync Cart
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/api/cart/sync
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "items": [
+      {
+        "id": "prod_test_001",
+        "slug": "test-product-001",
+        "name": "Test Product",
+        "price": 999,
+        "comparePrice": 1499,
+        "images": ["https://example.com/image.jpg"],
+        "category": "skincare",
+        "stock": 50,
+        "quantity": 1
+      },
+      {
+        "id": "prod_test_002",
+        "slug": "test-product-002",
+        "name": "Another Product",
+        "price": 499,
+        "images": ["https://example.com/image2.jpg"],
+        "category": "haircare",
+        "stock": 20,
+        "quantity": 2
+      }
+    ]
+  }
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body.success).to.equal(true)
+  expect(res.body).to.have.property("cart")
+}

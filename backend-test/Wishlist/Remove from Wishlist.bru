@@ -1,0 +1,27 @@
+meta {
+  name: Remove from Wishlist
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/api/wishlist/remove
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "productId": "prod_test_001"
+  }
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body.success).to.equal(true)
+}

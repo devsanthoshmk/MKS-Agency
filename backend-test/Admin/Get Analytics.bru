@@ -1,0 +1,25 @@
+meta {
+  name: Get Analytics (Admin)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/api/admin/analytics
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{admin_token}}
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body).to.have.property("totalOrders")
+  expect(res.body).to.have.property("pendingVerification")
+  expect(res.body).to.have.property("shipped")
+  expect(res.body).to.have.property("delivered")
+  expect(res.body).to.have.property("verifiedRevenue")
+  expect(res.body).to.have.property("completedRevenue")
+}

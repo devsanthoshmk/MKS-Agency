@@ -1,0 +1,21 @@
+meta {
+  name: Get Orders by Status (Admin)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/api/admin/orders?status=PENDING_VERIFICATION&limit=10
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{admin_token}}
+}
+
+tests {
+  expect(res.status).to.equal(200)
+  expect(res.body).to.have.property("orders")
+  expect(res.body.orders).to.be.an("array")
+}
