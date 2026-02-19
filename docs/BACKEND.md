@@ -3,7 +3,7 @@
 ## Overview
 
 The backend is a **Cloudflare Worker** that handles:
-- 🔐 Authentication (Google OAuth, email, guest)
+- 🔐 Authentication (Google OAuth, email magic link, guest checkout)
 - 📦 Order management with Convex database
 - 👑 Admin operations (order status, products via Convex)
 - ⏱️ Rate limiting via KV
@@ -19,7 +19,50 @@ The backend is a **Cloudflare Worker** that handles:
                                                   └─────────────────┘
 ```
 
-> **Note:** Products are now managed entirely via Convex. The previous GitHub API integration for products has been removed.
+> **Note:** Products are managed entirely via Convex. GitHub API integration for products has been removed.
+
+---
+
+## Project Structure
+
+```
+backend/
+├── src/
+│   ├── index.js              # Entry point — router setup, CORS & Convex middleware
+│   ├── lib/
+│   │   ├── auth.js           # requireAuth, requireAdmin middleware
+│   │   ├── convex.js         # ConvexClient HTTP class (query + mutation)
+│   │   ├── email.js          # sendEmail() helper
+│   │   ├── jwt.js            # createJWT, verifyJWT
+│   │   └── rate-limit.js     # checkRateLimit, incrementRateLimit, resetRateLimit
+│   ├── routes/
+│   │   ├── admin.js          # /api/admin/* routes (login, orders, analytics, products)
+│   │   ├── auth.js           # /api/auth/* routes (google, guest, email, verify)
+│   │   ├── cart.js           # /api/cart/* routes (get, add, update, remove, sync)
+│   │   ├── orders.js         # /api/orders/* routes (create, get, track)
+│   │   └── wishlist.js       # /api/wishlist/* routes (get, add, remove)
+│   └── utils/
+│       ├── cors.js           # Shared CORS headers object
+│       ├── helpers.js        # getClientIP, generateToken, generateOrderNumber
+│       └── response.js       # json() and error() response helpers
+├── package.json
+├── wrangler.jsonc            # Dev config
+└── wrangler.production.jsonc # Production config
+```
+
+### Routing — itty-router AutoRouter
+
+The backend uses **[itty-router](https://itty.dev/itty-router) `AutoRouter`** instead of a custom router class. Each domain is split into its own sub-router, all mounted in `index.js`.
+
+**`src/index.js`** acts as the application entry point:
+- Configures global CORS via `cors()` middleware (preflight + corsify)
+- Injects a `ConvexClient` instance into every `request` object via a `before` middleware
+- Mounts sub-routers under their respective base paths
+- Provides a **global `catch` handler** that returns structured JSON for any unhandled error
+
+**Each route file** (e.g., `routes/cart.js`) uses its own `AutoRouter({ base: '/api/cart' })` for clean, scoped route definitions.
+
+---
 
 ## Setup
 
@@ -53,25 +96,21 @@ Edit `wrangler.jsonc`:
 ```bash
 # JWT secret for signing tokens
 wrangler secret put JWT_SECRET
-# Enter: (generate a random 32+ character string)
 
 # Convex admin key (from Convex dashboard > Settings > Deploy Key)
 wrangler secret put CONVEX_ADMIN_KEY
-# Enter: your-convex-admin-key
 ```
 
-> **Note:** `GITHUB_TOKEN` is no longer required. Products are managed via Convex, not GitHub commits.
+> **Note:** `GITHUB_TOKEN` is no longer required.
 
 ### 4. Create KV Namespaces
 
 ```bash
 # Rate limiting storage
 wrangler kv:namespace create RATE_LIMIT
-# Copy the ID to wrangler.jsonc
 
 # Admin secrets storage
 wrangler kv:namespace create ADMIN_SECRETS
-# Copy the ID to wrangler.jsonc
 ```
 
 ### 5. Run Development Server
@@ -88,43 +127,144 @@ Backend runs at: `http://localhost:8787`
 
 ## API Endpoints
 
-### Authentication
+### Authentication (`/api/auth`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/auth/google` | Google OAuth login |
 | POST | `/api/auth/guest` | Guest checkout session |
 | POST | `/api/auth/verify-guest` | Verify guest email |
-| POST | `/api/auth/email/send` | Send email login link |
-| POST | `/api/auth/email/verify` | Verify email login token |
-| GET | `/api/auth/verify` | Verify JWT token |
+| POST | `/api/auth/email/send` | Send magic login link (rate-limited: 3/5min) |
+| POST | `/api/auth/email/verify` | Verify magic link token → JWT |
+| GET  | `/api/auth/verify` | Verify existing JWT token |
 
-### Orders
+### Orders (`/api/orders`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/orders` | Create new order |
-| GET | `/api/orders` | Get user's orders (auth required) |
-| GET | `/api/orders/:id` | Get single order (auth required) |
-| GET | `/api/orders/track/:orderNumber` | Track order (public) |
+| GET  | `/api/orders` | Get user's orders (auth required) |
+| GET  | `/api/orders/:id` | Get single order (auth required) |
+| GET  | `/api/orders/track/:orderNumber` | Track order (public) |
 
-### Admin
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/admin/login` | Admin login (rate limited) |
-| GET | `/api/admin/orders` | Get all orders |
-| PUT | `/api/admin/orders/:id/status` | Update order status |
-| GET | `/api/admin/analytics` | Get order analytics |
-| PUT | `/api/admin/products` | Manage products (Convex) |
-
-### Cart Sync
+### Cart (`/api/cart`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/cart/sync` | Sync localStorage cart to Convex |
-| GET | `/api/cart` | Get user's cart |
-| DELETE | `/api/cart` | Clear cart |
+| GET    | `/api/cart` | Get user's cart |
+| POST   | `/api/cart/add` | Add item to cart |
+| POST   | `/api/cart/update` | Update item quantity |
+| POST   | `/api/cart/remove` | Remove item from cart |
+| POST   | `/api/cart/clear` | Clear all items |
+| POST   | `/api/cart/sync` | Sync localStorage cart to Convex on login |
+| DELETE | `/api/cart` | Clear cart (alternative DELETE method) |
+
+### Wishlist (`/api/wishlist`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET  | `/api/wishlist` | Get user's wishlist |
+| POST | `/api/wishlist/add` | Add item to wishlist |
+| POST | `/api/wishlist/remove` | Remove item from wishlist |
+
+### Admin (`/api/admin`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/admin/login` | Admin login (rate-limited: 5/15min) |
+| GET  | `/api/admin/orders` | Get all orders |
+| PUT  | `/api/admin/orders/:id/status` | Update order status |
+| GET  | `/api/admin/analytics` | Get order analytics |
+| PUT  | `/api/admin/products` | Manage products (Convex) |
+
+### Health
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check |
+
+---
+
+## Key Libraries
+
+### `lib/convex.js` — ConvexClient
+
+A lightweight HTTP client for server-side Convex access:
+
+```js
+import { ConvexClient } from './lib/convex'
+const convex = new ConvexClient(env.CONVEX_URL)
+
+await convex.query('queries:getCart', { userId })
+await convex.mutation('mutations:createOrder', { ... })
+```
+
+The client automatically injects into every request via the middleware: `const { convex } = request`.
+
+### `lib/jwt.js` — JWT Utilities
+
+```js
+import { createJWT, verifyJWT } from './lib/jwt'
+
+const token = await createJWT({ userId, email }, env.JWT_SECRET, 86400)
+const claims = await verifyJWT(token, env.JWT_SECRET)
+```
+
+### `lib/auth.js` — Auth Middleware
+
+```js
+import { requireAuth, requireAdmin } from './lib/auth'
+
+const claims = await requireAuth(request, env) // returns null if invalid
+const admin  = await requireAdmin(request, env) // returns null if not admin
+```
+
+### `lib/rate-limit.js` — Rate Limiting
+
+```js
+import { checkRateLimit, incrementRateLimit, resetRateLimit } from './lib/rate-limit'
+
+const check = await checkRateLimit(env, ip, 'admin_login', 5, 900)
+if (!check.allowed) return error(`Retry in ${check.retryAfter}s`, 429)
+
+await incrementRateLimit(env, ip, 'admin_login')
+await resetRateLimit(env, ip, 'admin_login')
+```
+
+### `utils/response.js` — Response Helpers
+
+```js
+import { json, error } from '../utils/response'
+
+return json({ success: true })          // 200 JSON
+return json({ data }, 201)              // Custom status
+return error('Unauthorized', 401)       // Error JSON
+```
+
+---
+
+## Error Handling
+
+### Global Catch — `src/index.js`
+
+All unhandled errors are caught by the global `catch` handler in `AutoRouter`:
+
+```js
+const router = AutoRouter({
+    catch: (err) => json({ error: err.message, stack: err.stack }, 500),
+})
+```
+
+### Route-level Try/Catch
+
+Every route handler wraps logic in `try/catch`. On failure, it returns a structured JSON error with the real message (`e.message`) for easier debugging.
+
+### Frontend (`useAuth.js`)
+
+The `apiRequest` helper now handles non-JSON responses gracefully:
+- If the server returns a plain text or HTML error (e.g., a crash before JSON serialization), the raw text is thrown as the error message.
+- Falls back to `response.statusText` for completely unparseable responses.
+- Extracts `data.error || data.message` from structured JSON error bodies.
 
 ---
 
@@ -164,11 +304,16 @@ curl -X POST http://localhost:8787/api/orders \
   }'
 ```
 
+### Send Email Login Link
+```bash
+curl -X POST http://localhost:8787/api/auth/email/send \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com"}'
+```
+
 ### Get Admin Analytics
 ```bash
-# First get admin token from login
 TOKEN="your-admin-token-here"
-
 curl http://localhost:8787/api/admin/analytics \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -191,7 +336,6 @@ curl -X PUT http://localhost:8787/api/admin/orders/ORDER_ID/status \
 ```
 PENDING_VERIFICATION  ──▶  PAYMENT_VERIFIED  ──▶  PROCESSING  ──▶  SHIPPED  ──▶  DELIVERED
          │                        │                   │              │
-         │                        │                   │              │
          └────────────────────────┴───────────────────┴──────────────┴───▶  CANCELLED
          │                        │                   │              │
          └────────────────────────┴───────────────────┴──────────────┴───▶  FAILED
@@ -201,18 +345,14 @@ PENDING_VERIFICATION  ──▶  PAYMENT_VERIFIED  ──▶  PROCESSING  ──
 
 ## Deployment
 
-### Development Deployment
+### Development
 ```bash
-# Deploy with development settings (wrangler.jsonc)
-pnpm run deploy
-# or
-wrangler deploy
+pnpm run dev
 ```
 
-### Production Deployment
+### Production
 ```bash
-# Deploy with production settings (wrangler.production.jsonc)
-pnpm run deploy:prod
+pnpm run deploy
 # or
 wrangler deploy -c wrangler.production.jsonc
 ```
@@ -236,6 +376,10 @@ wrangler deploy -c wrangler.production.jsonc
 | Email Server | https://mksagencies-email.netlify.app |
 | Database | https://tame-ermine-520.convex.cloud |
 
+---
+
 ## Related Documentation
 
 - [Email Server Documentation](EMAIL_SERVER.md)
+- [Database Schema](DATABASE.md)
+- [Frontend Documentation](FRONTEND.md)

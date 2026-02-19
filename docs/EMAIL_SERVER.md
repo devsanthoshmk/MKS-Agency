@@ -35,7 +35,7 @@ ADMIN_EMAIL=admin@example.com (optional, defaults to GMAIL_USER)
 
 ```bash
 # Install Netlify CLI globally if not already installed
-npm install -g netlify-cli
+pnpm install -g netlify-cli
 
 # Run locally
 netlify dev
