@@ -119,10 +119,24 @@ async function apiRequest(endpoint, options = {}) {
         headers,
     })
 
-    const data = await response.json()
+    let data
+    try {
+        const text = await response.text()
+        try {
+            data = JSON.parse(text)
+        } catch {
+            // If response is not JSON (e.g. HTML 500 error), use text as error
+            throw new Error(text || response.statusText)
+        }
+    } catch (e) {
+        // If parsing didn't work, ensure we have a fallback
+        if (!data) {
+            throw new Error(`Request failed: ${response.status} ${response.statusText}`)
+        }
+    }
 
     if (!response.ok) {
-        throw new Error(data.error || 'Request failed')
+        throw new Error(data.error || data.message || 'Request failed')
     }
 
     return data

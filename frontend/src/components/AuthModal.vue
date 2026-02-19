@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useUI } from '../composables/useUI'
 
@@ -98,7 +98,6 @@ function resetEmailState() {
 }
 
 // Re-render button when modal opens
-import { watch } from 'vue'
 watch(isAuthModalOpen, (open) => {
   if (open) {
     setTimeout(renderGoogleButton, 100)
@@ -114,135 +113,128 @@ watch(isAuthModalOpen, (open) => {
       class="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <!-- Overlay -->
-      <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="closeAuthModal" />
+      <!-- <div class="overlay" @click="closeAuthModal" /> -->
       
       <!-- Modal -->
-      <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+      <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-scale-in border border-surface-100/50">
         <!-- Close Button -->
         <button 
-          class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center hover:bg-surface-200 transition-colors"
+          class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center bg-surface-50 hover:bg-surface-100 text-surface-400 hover:text-surface-900 transition-colors"
           @click="closeAuthModal"
         >
-          <svg class="w-5 h-5 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
         
+        <!-- Header -->
+        <div class="pt-10 px-8 text-center">
+            <div class="inline-block w-20 h-20 rounded-2xl overflow-hidden shadow-lg mb-6 ring-4 ring-surface-50">
+                <img src="/logo.jpeg" alt="MKS AGENCY" class="w-full h-full object-cover" />
+            </div>
+            <h2 class="text-3xl font-display font-medium text-surface-900 mb-2">Welcome Back</h2>
+            <p class="text-surface-500 text-sm">Sign in to access your account & orders</p>
+        </div>
+
         <!-- Content -->
-        <div class="p-8 text-center">
-          <!-- Logo -->
-          <img src="/logo.jpeg" alt="MKS AGENCY" class="w-16 h-16 rounded-full object-cover mx-auto mb-6 shadow-sm" />
-          
-          <h2 class="text-2xl font-display font-bold text-surface-900 mb-2">Welcome</h2>
-          <p class="text-surface-500 mb-8">Sign in to access your account and orders</p>
-          
+        <div class="p-8">
           <!-- Error Message -->
-          <div v-if="error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <p class="text-red-700 text-sm">{{ error }}</p>
-          </div>
+          <transition name="fade">
+              <div v-if="error" class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3">
+                <svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <p class="text-red-600 text-sm font-medium">{{ error }}</p>
+              </div>
+          </transition>
           
-          <!-- Google Sign In Button - Hidden for now, will be enabled in the future -->
-          <!-- <div id="google-signin-button" class="flex justify-center mb-6" /> -->
-          
-          <!-- Fallback Button - Hidden for now -->
-          <!-- <button 
-            v-if="!googleLoaded"
-            class="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border border-surface-300 rounded-xl hover:bg-surface-50 transition-colors"
-            :disabled="isLoading"
-          >
-            <svg class="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            <span class="font-medium text-surface-700">
-              {{ isLoading ? 'Signing in...' : 'Continue with Google' }}
-            </span>
-          </button> -->
+          <!-- Google Sign In Button - Placeholder for now -->
+          <!-- <div id="google-signin-button" class="flex justify-center mb-6 h-[44px]" /> -->
           
           <!-- Email Login Section -->
-          <div class="bg-surface-50 rounded-xl p-4 text-left mb-6">
+          <div class="bg-surface-50 rounded-2xl p-6 border border-surface-100 transition-all duration-300 hover:shadow-sm">
             <template v-if="!emailSent">
-              <h3 class="font-semibold text-surface-900 mb-2">Sign in with Email</h3>
-              <p class="text-sm text-surface-600 mb-3">
-                Enter your email and we'll send you a secure login link.
-              </p>
-              <form @submit.prevent="handleEmailSubmit" class="space-y-3">
+              <div class="mb-4">
+                  <h3 class="font-bold text-surface-900 text-sm uppercase tracking-wide mb-1">Sign in with Email</h3>
+                  <p class="text-xs text-surface-500">We'll send a secure magic link to your inbox.</p>
+              </div>
+              <form @submit.prevent="handleEmailSubmit" class="space-y-4">
                 <div>
                   <input
                     v-model="emailInput"
                     type="email"
-                    placeholder="your@email.com"
-                    class="w-full px-4 py-3 border border-surface-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                    placeholder="name@example.com"
+                    class="w-full px-4 py-3 bg-white border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all placeholder:text-surface-400 text-surface-900"
                     :class="{ 'border-red-400 bg-red-50': emailError }"
                     :disabled="isLoading"
                   />
-                  <p v-if="emailError" class="text-red-500 text-xs mt-1">{{ emailError }}</p>
+                  <p v-if="emailError" class="text-red-500 text-xs mt-1 ml-1">{{ emailError }}</p>
                 </div>
                 <button 
                   type="submit"
-                  class="btn btn-primary w-full"
+                  class="btn btn-primary w-full shadow-lg shadow-primary-500/20"
                   :disabled="isLoading"
                 >
                   <span v-if="isLoading" class="spinner mr-2" />
-                  {{ isLoading ? 'Sending...' : 'Send Login Link' }}
+                  {{ isLoading ? 'Sending Link...' : 'Send Login Link' }}
                 </button>
               </form>
             </template>
             <template v-else>
               <!-- Success State -->
-              <div class="text-center py-2">
-                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
-                  <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="text-center py-4">
+                <div class="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4 relative">
+                   <div class="absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-20"></div>
+                  <svg class="w-8 h-8 text-emerald-500 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h3 class="font-semibold text-surface-900 mb-1">Check Your Email!</h3>
-                <p class="text-sm text-surface-600 mb-3">
-                  We've sent a login link to<br>
-                  <strong class="text-primary-700">{{ emailSentTo }}</strong>
+                <h3 class="font-display font-bold text-xl text-surface-900 mb-2">Check Your Email</h3>
+                <p class="text-sm text-surface-600 mb-6 leading-relaxed">
+                  We've sent a magic login link to<br>
+                  <strong class="text-primary-700 bg-primary-50 px-2 py-0.5 rounded">{{ emailSentTo }}</strong>
                 </p>
-                <button 
-                  class="text-sm text-primary-600 hover:underline"
-                  @click="resetEmailState"
-                >
-                  Use a different email
-                </button>
+                <div class="space-y-3">
+                    <button 
+                    class="btn btn-secondary w-full text-sm"
+                    @click="closeAuthModal"
+                    >
+                    Close Window
+                    </button>
+                    <button 
+                    class="text-xs text-surface-400 hover:text-surface-600 underline"
+                    @click="resetEmailState"
+                    >
+                    Use a different email address
+                    </button>
+                </div>
               </div>
             </template>
           </div>
           
           <!-- Divider -->
-          <div class="relative my-6">
+          <div class="relative my-8">
             <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-surface-200" />
+              <div class="w-full border-t border-surface-100" />
             </div>
-            <div class="relative flex justify-center text-sm">
-              <span class="px-4 bg-white text-surface-400">or</span>
+            <div class="relative flex justify-center text-xs font-medium uppercase tracking-widest text-surface-400">
+              <span class="px-2 bg-white">Or</span>
             </div>
           </div>
           
           <!-- Guest Checkout Info -->
-          <div class="bg-surface-50 rounded-xl p-4 text-left">
-            <h3 class="font-semibold text-surface-900 mb-2">Continue as Guest</h3>
-            <p class="text-sm text-surface-600 mb-3">
-              You can also checkout without signing in. Just proceed to checkout and enter your details.
-            </p>
-            <button 
-              class="btn btn-secondary btn-sm w-full"
-              @click="closeAuthModal"
-            >
-              Continue as Guest
-            </button>
-          </div>
+          <button 
+            class="w-full py-3 rounded-xl border border-surface-200 text-surface-600 hover:text-surface-900 hover:border-surface-300 hover:bg-surface-50 transition-all duration-200 font-medium text-sm flex items-center justify-center gap-2 group"
+            @click="closeAuthModal"
+          >
+            <span>Continue as Guest</span>
+            <svg class="w-4 h-4 text-surface-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+          </button>
           
           <!-- Terms -->
-          <p class="text-xs text-surface-400 mt-6">
-            By signing in, you agree to our 
-            <a href="#" class="text-primary-600 hover:underline">Terms of Service</a> 
+          <p class="text-[10px] text-center text-surface-400 mt-8 leading-relaxed px-4">
+            By continuing, you agree to our 
+            <a href="#" class="text-surface-600 hover:text-primary-600 hover:underline">Terms of Service</a> 
             and 
-            <a href="#" class="text-primary-600 hover:underline">Privacy Policy</a>
+            <a href="#" class="text-surface-600 hover:text-primary-600 hover:underline">Privacy Policy</a>
           </p>
         </div>
       </div>
@@ -253,7 +245,7 @@ watch(isAuthModalOpen, (open) => {
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.3s ease;
 }
 
 .fade-enter-from,
@@ -261,4 +253,3 @@ watch(isAuthModalOpen, (open) => {
   opacity: 0;
 }
 </style>
-
