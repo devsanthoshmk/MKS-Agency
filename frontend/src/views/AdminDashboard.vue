@@ -479,7 +479,7 @@ async function handleOrderStatusUpdate({ orderId, status }) {
     <!-- Order Edit Modal -->
     <OrderEditModal
       :order="selectedOrder"
-      :is-open="!!selectedOrder"
+      :show="!!selectedOrder"
       @close="closeOrderModal"
       @save="handleOrderSave"
       @update-status="handleOrderStatusUpdate"
