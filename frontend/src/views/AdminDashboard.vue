@@ -281,7 +281,7 @@ async function handleOrderStatusUpdate({ orderId, status }) {
             <!-- Premium Logo Reveal -->
             <div class="relative w-24 h-24 mx-auto mb-6 transform hover:scale-105 transition-transform duration-500">
               <div class="absolute inset-0 bg-emerald-500/20 rounded-3xl blur-2xl animate-pulse-slow"></div>
-              <img src="/logo.jpeg" alt="Logo" class="relative w-full h-full object-cover rounded-3xl border border-slate-200/50 shadow-xl bg-white" />
+              <img src="/logo.png" alt="Logo" class="relative w-full h-full object-cover rounded-3xl border border-slate-200/50 shadow-xl bg-white" />
             </div>
             <h1 class="text-4xl font-outfit font-extrabold text-slate-800 tracking-tight">Admin Gateway</h1>
             <p class="text-emerald-600 text-sm font-medium mt-3 uppercase tracking-widest font-inter">Secure Operations Center</p>
@@ -351,7 +351,7 @@ async function handleOrderStatusUpdate({ orderId, status }) {
           <!-- Logo Area -->
           <div class="h-24 flex items-center px-6 border-b border-slate-100">
             <div class="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-slate-200 shadow-sm flex items-center justify-center bg-white">
-              <img src="/logo.jpeg" alt="Logo" class="w-full h-full object-cover" />
+              <img src="/logo.png" alt="Logo" class="w-full h-full object-cover" />
             </div>
             <div class="ml-4 overflow-hidden transition-all duration-300 whitespace-nowrap" :class="isSidebarExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'">
               <span class="block font-outfit font-bold tracking-wide text-slate-900 text-base">MKS Agency</span>
@@ -398,7 +398,7 @@ async function handleOrderStatusUpdate({ orderId, status }) {
           <header class="h-24 sticky top-0 z-40 px-6 md:px-10 flex items-center justify-between border-b border-slate-200 bg-white/70 backdrop-blur-2xl transition-all shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
             <div class="flex items-center gap-4">
               <div class="md:hidden w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
-                <img src="/logo.jpeg" alt="Logo" class="w-8 h-8 object-cover rounded-lg" />
+                <img src="/logo.png" alt="Logo" class="w-8 h-8 object-cover rounded-lg" />
               </div>
               <div class="animate-fade-in-up">
                 <h1 class="font-outfit text-2xl md:text-[1.75rem] font-extrabold text-slate-800 tracking-tight flex items-center gap-3">

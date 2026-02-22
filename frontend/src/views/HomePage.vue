@@ -157,7 +157,7 @@ const sortOptions = [
              <div class="relative w-full aspect-square transform hover:rotate-y-12 transition-transform duration-700 ease-out preserve-3d">
                 <div class="absolute inset-10 bg-gradient-to-br from-primary-100 to-secondary-50 rounded-[2rem] shadow-2xl rotate-3"></div>
                 <div class="absolute inset-10 bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-xl -rotate-3 border border-white/50 flex items-center justify-center overflow-hidden">
-                    <img src="/logo.jpeg" alt="Siddha Medicine" class="w-48 h-48 object-cover rounded-full shadow-lg opacity-80 mix-blend-multiply" />
+                    <img src="/logo.png" alt="Siddha Medicine" class="w-48 h-48 object-cover  opacity-80 mix-blend-multiply" />
                 </div>
                 
                 <!-- Floating Cards -->
@@ -319,7 +319,7 @@ const sortOptions = [
                 <div class="md:col-span-5 space-y-6">
                     <div class="flex items-center gap-3">
                          <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10">
-                             <img src="/logo.jpeg" alt="MKS AGENCY" class="w-full h-full object-cover" />
+                             <img src="/logo.png" alt="MKS AGENCY" class="w-full h-full object-cover" />
                          </div>
                          <h2 class="text-2xl font-display font-bold">MKS AGENCY</h2>
                     </div>

@@ -68,7 +68,7 @@ function handleLogout() {
         <!-- Logo -->
         <router-link to="/" class="group flex items-center gap-3">
           <div class="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden shadow-lg border-2 border-white/50 group-hover:scale-105 transition-transform duration-300">
-            <img src="/logo.jpeg" alt="MKS AGENCY" class="w-full h-full object-cover" />
+            <img src="/logo.png" alt="MKS AGENCY" class="w-full h-full object-cover" />
           </div>
           <div class="hidden sm:flex flex-col">
             <span class="text-xl font-display font-bold text-surface-900 leading-none tracking-tight group-hover:text-primary-700 transition-colors">MKS AGENCY</span>

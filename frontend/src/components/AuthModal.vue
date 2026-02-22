@@ -130,7 +130,7 @@ watch(isAuthModalOpen, (open) => {
         <!-- Header -->
         <div class="pt-10 px-8 text-center">
             <div class="inline-block w-20 h-20 rounded-2xl overflow-hidden shadow-lg mb-6 ring-4 ring-surface-50">
-                <img src="/logo.jpeg" alt="MKS AGENCY" class="w-full h-full object-cover" />
+                <img src="/logo.png" alt="MKS AGENCY" class="w-full h-full object-cover" />
             </div>
             <h2 class="text-3xl font-display font-medium text-surface-900 mb-2">Welcome Back</h2>
             <p class="text-surface-500 text-sm">Sign in to access your account & orders</p>
