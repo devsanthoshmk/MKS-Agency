@@ -40,7 +40,7 @@ MKS Agencies is a **production e-commerce platform** for an Ayurvedic products b
 | **Database** | Convex (real-time, TypeScript) | Convex Cloud |
 | **Email** | Netlify Functions + Nodemailer (Gmail SMTP) | Netlify |
 | **Auth** | Google OAuth + Email Magic Links + Guest Checkout | — |
-| **Products** | Static JSON synced from GitHub | GitHub API |
+| **Products** | Convex `products` table (managed via admin panel) | Convex Cloud |
 | **State** | Vue Composables (NO Vuex/Pinia) | — |
 | **Package Manager** | pnpm | — |
 | **Testing** | Vitest + @cloudflare/vitest-pool-workers | — |

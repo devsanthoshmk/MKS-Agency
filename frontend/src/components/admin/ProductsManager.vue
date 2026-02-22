@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, defineProps, defineEmits, onMounted, watch } from 'vue'
+import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
 import ProductEditModal from './ProductEditModal.vue'
 import { useUI } from '../../composables/useUI'
 import { ConvexHttpClient } from 'convex/browser'
@@ -27,6 +27,7 @@ const saveSuccess = ref('')
 const imageNotice = ref('')
 const searchQuery = ref('')
 const categoryFilter = ref('all')
+const activeSection = ref('basic')
 const isUploading = ref(false)
 const uploadProgress = ref(0)
 
@@ -71,10 +72,6 @@ const filteredProducts = computed(() => {
 
 function formatPrice(price) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(price)
-}
-
-function generateSlug(name) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
 
 function createNewProduct() {
@@ -393,89 +390,157 @@ async function downloadAndUploadImages(imageUrls) {
 </script>
 
 <template>
-  <div class="products-mgr">
-    <!-- Toolbar -->
-    <div class="prod-toolbar">
-      <div class="prod-search">
-        <svg class="prod-search__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input v-model="searchQuery" type="text" placeholder="Search products..." class="prod-search__input" />
+  <div class="h-full flex flex-col mx-auto animate-fade-in relative z-10 max-w-[1600px] w-full mt-2 lg:mt-0">
+    
+    <!-- Header & Controls -->
+    <div class="mb-8 flex-shrink-0">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div>
+           <h2 class="text-3xl font-outfit font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
+             Product Vault
+             <div class="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold font-inter text-emerald-600 tracking-widest shadow-sm">
+               {{ props.products.length }}
+             </div>
+           </h2>
+           <p class="text-slate-500 text-[0.85rem] mt-2 max-w-md leading-relaxed tracking-wide">Manage inventory logistics, pricing structures, and product configurations.</p>
+        </div>
+         <div class="flex items-center gap-3">
+            <button @click="emit('refresh')" class="h-10 px-4 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-emerald-600 hover:bg-slate-50 hover:border-emerald-200 flex items-center justify-center gap-2 transition-all duration-300 group shadow-sm" title="Sync Data">
+               <svg class="transition-transform duration-700 ease-out text-slate-400 group-hover:text-emerald-500 group-hover:rotate-180" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/></svg>
+               <span class="text-sm font-semibold tracking-wide">Sync State</span>
+            </button>
+        </div>
       </div>
-      <div class="prod-toolbar__actions">
-        <select v-model="categoryFilter" class="prod-select">
-          <option v-for="cat in categories" :key="cat" :value="cat">{{ cat === 'all' ? 'All Categories' : cat }}</option>
-        </select>
-        <button class="prod-add-btn" @click="createNewProduct">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span class="prod-add-btn__text">Add Product</span>
-        </button>
+
+      <!-- Toolbar Light Panel -->
+      <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-2 border border-slate-200 flex flex-col lg:flex-row shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden z-20">
+        
+        <!-- Search Input -->
+        <div class="relative w-full lg:flex-1 group p-2">
+          <svg class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors pointer-events-none w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search products by nomenclature or category..."
+            class="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-3 text-slate-800 text-[0.95rem] outline-none transition-all placeholder:text-slate-400 hover:bg-white focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+          />
+        </div>
+        
+        <div class="w-full lg:w-px h-px lg:h-12 bg-slate-200 mx-2 lg:my-auto"></div>
+
+        <div class="flex flex-row w-full lg:w-auto p-2 gap-2">
+          <!-- Category Filter -->
+          <div class="relative w-1/2 lg:w-48 group">
+             <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400 group-hover:text-emerald-600 transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+             </div>
+            <select v-model="categoryFilter" class="w-full appearance-none bg-transparent border border-transparent rounded-2xl pl-4 pr-10 py-3 text-slate-600 text-[0.9rem] font-bold outline-none transition-all hover:bg-slate-50 focus:bg-white focus:border-emerald-500 cursor-pointer">
+              <option v-for="cat in categories" :key="cat" :value="cat">{{ cat === 'all' ? 'All Classes' : cat }}</option>
+            </select>
+          </div>
+          
+           <!-- Add Product Button -->
+           <button @click="createNewProduct" class="w-1/2 lg:w-auto flex flex-1 items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl font-bold tracking-wide text-[0.9rem] shadow-sm hover:shadow-md hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all duration-300 group/btn whitespace-nowrap">
+             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 group-hover/btn:rotate-90 transition-transform duration-300"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+             <span>Initialize Item</span>
+           </button>
+        </div>
       </div>
     </div>
 
-    <!-- Stats -->
-    <p class="prod-count">Showing {{ filteredProducts.length }} of {{ products.length }} products</p>
-
-    <!-- Product Grid -->
-    <div class="prod-grid">
-      <div
-        v-for="product in filteredProducts"
-        :key="product.id"
-        class="prod-card"
-      >
-        <!-- Image -->
-        <div class="prod-card__img" @click="previewProduct(product)" style="cursor: pointer;">
-          <img v-if="product.images?.[0]" :src="product.images[0]" :alt="product.name" />
-          <div v-else class="prod-card__no-img">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          </div>
-
-          <!-- Preview overlay -->
-          <div class="prod-card__preview-overlay">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <span>Preview</span>
-          </div>
-
-          <!-- Badges -->
-          <div class="prod-card__badges">
-            <span :class="['prod-badge', product.stock > 0 ? 'prod-badge--stock' : 'prod-badge--oos']">
-              {{ product.stock > 0 ? `${product.stock} in stock` : 'Out of stock' }}
-            </span>
-            <span v-if="!product.isActive" class="prod-badge prod-badge--draft">Draft</span>
-          </div>
-        </div>
-
-        <!-- Content -->
-        <div class="prod-card__body">
-          <span class="prod-card__category">{{ product.category }}</span>
-          <h4 class="prod-card__name" :title="product.name">{{ product.name }}</h4>
-
-          <div class="prod-card__footer">
-            <div class="prod-card__pricing">
-              <span class="prod-card__price">{{ formatPrice(product.price) }}</span>
-              <span v-if="product.comparePrice" class="prod-card__compare">{{ formatPrice(product.comparePrice) }}</span>
-            </div>
-            <div class="prod-card__actions">
-              <button class="prod-icon-btn prod-icon-btn--preview" @click="previewProduct(product)" title="Preview as customer">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              </button>
-              <button class="prod-icon-btn" @click="editProduct(product)" title="Edit">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
-              <button class="prod-icon-btn prod-icon-btn--danger" @click="deleteProduct(product.id || product.productId)" :disabled="isSaving" title="Delete">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Main Content Area -->
+    <div class="flex-1 min-h-0 relative z-10 overflow-x-hidden overflow-y-auto custom-scrollbar pb-10">
       
-      <!-- Empty State -->
-      <div v-if="filteredProducts.length === 0" class="prod-empty">
-        <div class="prod-empty__icon">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+       <!-- Empty State -->
+       <Transition name="fade">
+        <div v-if="filteredProducts.length === 0" class="bg-white/90 backdrop-blur-xl rounded-[2rem] h-full min-h-[400px] flex flex-col items-center justify-center p-12 text-center border border-slate-200 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.06)] relative overflow-hidden">
+          
+          <div class="w-24 h-24 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 mb-8 relative shadow-sm">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="relative z-10"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+          <h3 class="text-2xl font-outfit font-extrabold text-slate-800 mb-3">No products matched</h3>
+          <p class="text-slate-500 max-w-sm text-[0.95rem] leading-relaxed mb-8">We couldn't locate any items matching your designated query vector.</p>
+          <button v-if="searchQuery || categoryFilter !== 'all'" @click="searchQuery = ''; categoryFilter = 'all'" class="px-8 py-3.5 rounded-2xl bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 font-bold text-sm tracking-wide transition-all border border-slate-200 hover:border-emerald-300 shadow-sm group">
+            <span class="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="group-hover:rotate-90 transition-transform duration-300"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Clear Vectors
+            </span>
+          </button>
         </div>
-        <p class="prod-empty__text">No products found</p>
-        <button class="prod-empty__clear" @click="categoryFilter = 'all'; searchQuery = ''">Clear filters</button>
-      </div>
+      </Transition>
+
+      <!-- Product Grid -->
+      <TransitionGroup name="grid" tag="div" v-if="filteredProducts.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6 pt-2 relative z-20">
+        <div
+          v-for="product in filteredProducts"
+          :key="product.id || product.productId"
+          class="group bg-white backdrop-blur-2xl border border-slate-200 rounded-[2rem] overflow-hidden flex flex-col hover:-translate-y-2 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] hover:border-emerald-300 transition-all duration-500 relative cursor-pointer"
+          @click="previewProduct(product)"
+        >
+          <!-- Hover ambient glow -->
+           <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-0"></div>
+
+          <!-- Image Container -->
+          <div class="relative aspect-[4/3] bg-slate-50 overflow-hidden w-full flex-shrink-0 border-b border-slate-100">
+            <img v-if="product.images?.[0]" :src="product.images[0]" :alt="product.name" class="w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-[1.05]" />
+            <div v-else class="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-100/50">
+               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+               <span class="text-[0.65rem] font-bold uppercase tracking-[0.15em]">No Asset</span>
+            </div>
+
+            <!-- Preview Overlay on Hover -->
+            <div class="absolute inset-0 bg-white/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+               <div class="flex flex-col items-center gap-3 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+                  <div class="w-12 h-12 rounded-2xl bg-white text-emerald-600 flex items-center justify-center shadow-lg border border-slate-100">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </div>
+               </div>
+            </div>
+
+            <!-- Badges -->
+            <div class="absolute top-4 right-4 flex flex-col items-end gap-2 z-20 pointer-events-none">
+              <span class="px-3 py-1.5 rounded-full text-[0.65rem] font-bold uppercase tracking-widest shadow-sm backdrop-blur-md border border-white/40" :class="product.stock > 0 ? 'bg-emerald-100/90 text-emerald-700' : 'bg-rose-100/90 text-rose-700'">
+                {{ product.stock > 0 ? `${product.stock} units` : 'Depleted' }}
+              </span>
+              <span v-if="!product.isActive" class="px-3 py-1.5 rounded-full text-[0.65rem] font-bold uppercase tracking-widest bg-slate-100/90 text-slate-600 shadow-sm backdrop-blur-md border border-white/40">
+                Draft
+              </span>
+            </div>
+          </div>
+
+          <!-- Card Content -->
+          <div class="p-6 flex flex-col flex-1 relative z-10 pointer-events-none">
+             <!-- Interactive area inside card content -->
+             <div class="pointer-events-auto flex flex-col h-full flex-1 justify-between">
+               <div>
+                 <div class="mb-3">
+                   <span class="text-[0.65rem] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">{{ product.category || 'Unassigned' }}</span>
+                 </div>
+                 
+                 <h4 class="text-xl font-outfit font-extrabold text-slate-800 leading-tight mb-6 group-hover:text-emerald-700 transition-colors line-clamp-2" :title="product.name">{{ product.name }}</h4>
+               </div>
+  
+               <div class="mt-auto pt-5 border-t border-slate-100 flex items-center justify-between">
+                  <!-- Pricing -->
+                  <div class="flex flex-col">
+                    <span class="font-outfit font-black text-xl text-slate-800 transition-colors">{{ formatPrice(product.price) }}</span>
+                    <span v-if="product.comparePrice" class="text-xs text-slate-400 font-bold line-through align-top">{{ formatPrice(product.comparePrice) }}</span>
+                  </div>
+  
+                  <!-- Actions -->
+                  <div class="flex gap-2 relative z-20">
+                     <button @click.stop="editProduct(product)" class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 flex items-center justify-center transition-all shadow-sm hover:shadow-md group/edit">
+                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover/edit:-translate-y-0.5 group-hover/edit:-translate-x-0.5 transition-transform"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                     </button>
+                     <button @click.stop="deleteProduct(product.id || product.productId)" :disabled="isSaving" class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 text-rose-500 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md group/del">
+                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover/del:scale-110 transition-transform"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                     </button>
+                  </div>
+               </div>
+             </div>
+          </div>
+        </div>
+      </TransitionGroup>
     </div>
 
     <!-- Product Edit/Create Modal -->
@@ -499,386 +564,52 @@ async function downloadAndUploadImages(imageUrls) {
 </template>
 
 <style scoped>
-.products-mgr {
-  animation: fadeUp 0.4s ease;
+.animate-fade-in {
+  animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(10px); }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ----- TOOLBAR ----- */
-.prod-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  margin-bottom: 1rem;
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
-
-@media (min-width: 768px) {
-  .prod-toolbar {
-    flex-direction: row;
-    align-items: center;
-    padding: 0.75rem 1rem;
-  }
-}
-
-.prod-search {
-  position: relative;
-  flex: 1;
-}
-
-.prod-search__icon {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #4b5563;
-  pointer-events: none;
-}
-
-.prod-search__input {
-  width: 100%;
-  padding: 0.65rem 0.875rem 0.65rem 2.5rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  color: #e5e7eb;
-  font-size: 0.875rem;
-  outline: none;
-  transition: all 0.2s;
-  box-sizing: border-box;
-}
-
-.prod-search__input::placeholder { color: #4b5563; }
-.prod-search__input:focus {
-  border-color: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.12);
-}
-
-.prod-toolbar__actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.prod-select {
-  flex: 1;
-  min-width: 0;
-  padding: 0.65rem 0.875rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  color: #e5e7eb;
-  font-size: 0.875rem;
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  box-sizing: border-box;
-}
-
-@media (min-width: 768px) {
-  .prod-select { width: 180px; flex: none; }
-}
-
-.prod-select option {
-  background: #1a1b22;
-  color: #e5e7eb;
-}
-
-.prod-add-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.65rem 1rem;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-}
-
-.prod-add-btn:hover {
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
-  transform: translateY(-1px);
-}
-
-.prod-add-btn:active {
-  transform: scale(0.97);
-}
-
-.prod-add-btn__text {
-  display: none;
-}
-
-@media (min-width: 640px) {
-  .prod-add-btn__text { display: inline; }
-}
-
-/* ----- COUNT ----- */
-.prod-count {
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin: 0 0 0.75rem 0.25rem;
-}
-
-/* ----- PRODUCT GRID ----- */
-.prod-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-  padding-bottom: 5rem;
-}
-
-@media (min-width: 640px) { .prod-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 1024px) { .prod-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1280px) { .prod-grid { grid-template-columns: repeat(4, 1fr); } }
-
-@media (min-width: 768px) {
-  .prod-grid { padding-bottom: 0; }
-}
-
-.prod-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.25s ease;
-}
-
-.prod-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.prod-card__img {
-  position: relative;
-  aspect-ratio: 4/3;
-  background: rgba(255, 255, 255, 0.02);
-  overflow: hidden;
-}
-
-.prod-card__img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s ease;
-}
-
-.prod-card:hover .prod-card__img img {
-  transform: scale(1.05);
-}
-
-.prod-card__no-img {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #374151;
-}
-
-.prod-card__badges {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  align-items: flex-end;
-}
-
-.prod-badge {
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  backdrop-filter: blur(8px);
-}
-
-.prod-badge--stock {
-  background: rgba(16, 185, 129, 0.85);
-  color: white;
-}
-
-.prod-badge--oos {
-  background: rgba(239, 68, 68, 0.85);
-  color: white;
-}
-
-.prod-badge--draft {
-  background: rgba(107, 114, 128, 0.85);
-  color: white;
-}
-
-.prod-card__body {
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.prod-card__category {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.25rem;
-}
-
-.prod-card__name {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #f0f1f3;
-  margin: 0;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.prod-card__footer {
-  margin-top: auto;
-  padding-top: 0.875rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.prod-card__pricing {
-  display: flex;
-  flex-direction: column;
-}
-
-.prod-card__price {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 1.05rem;
-  color: #10b981;
-}
-
-.prod-card__compare {
-  font-size: 0.75rem;
-  color: #4b5563;
-  text-decoration: line-through;
-}
-
-.prod-card__actions {
-  display: flex;
-  gap: 0.375rem;
-}
-
-.prod-icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #9ca3af;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.prod-icon-btn:hover {
-  background: rgba(16, 185, 129, 0.08);
-  color: #10b981;
-  border-color: rgba(16, 185, 129, 0.2);
-}
-
-.prod-icon-btn--danger:hover {
-  background: rgba(239, 68, 68, 0.08);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
-.prod-icon-btn--preview:hover {
-  background: rgba(99, 102, 241, 0.08);
-  color: #818cf8;
-  border-color: rgba(99, 102, 241, 0.2);
-}
-
-/* Preview overlay on image hover */
-.prod-card__preview-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(2px);
-  color: white;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
-  transition: opacity 0.25s ease;
-  pointer-events: none;
-  z-index: 2;
+  transform: translateY(-5px) scale(0.98);
 }
 
-.prod-card__img:hover .prod-card__preview-overlay {
-  opacity: 1;
+/* Grid Transitions */
+.grid-move,
+.grid-enter-active,
+.grid-leave-active {
+  transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.grid-enter-from,
+.grid-leave-to {
+  opacity: 0;
+  transform: scale(0.9) translateY(20px);
+}
+.grid-leave-active {
+  position: absolute;
 }
 
-/* ----- EMPTY STATE ----- */
-.prod-empty {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 4rem 2rem;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  text-align: center;
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
 }
-
-.prod-empty__icon {
-  color: #374151;
-  margin-bottom: 1rem;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-.prod-empty__text {
-  font-size: 1rem;
-  color: #9ca3af;
-  margin: 0 0 0.75rem;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.3);
+  border-radius: 20px;
 }
-
-.prod-empty__clear {
-  background: none;
-  border: none;
-  color: #10b981;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.85rem;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.5);
 }
-
-.prod-empty__clear:hover {
-  color: #34d399;
-}
-
-
 </style>

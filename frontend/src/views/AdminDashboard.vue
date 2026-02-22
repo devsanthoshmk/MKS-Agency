@@ -11,7 +11,6 @@ import OrderEditModal from '@/components/admin/OrderEditModal.vue'
 import ProductsManager from '@/components/admin/ProductsManager.vue'
 import ContentManager from '@/components/admin/ContentManager.vue'
 
-
 // API URL for production/development
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 
@@ -26,7 +25,7 @@ const authError = ref('')
 const adminToken = ref(null)
 const showPasscode = ref(false)
 
-// Tab state — derived from route path (industry standard)
+// Tab state — derived from route path
 const activeTab = computed(() => {
   const path = route.path.replace('/admin/', '').replace('/admin', '')
   const validTabs = ['analytics', 'orders', 'products', 'content', 'settings']
@@ -36,21 +35,21 @@ const activeTab = computed(() => {
 function setActiveTab(tabId) {
   router.push(`/admin/${tabId}`)
 }
-const sidebarExpanded = ref(false)
+
+const isSidebarExpanded = ref(true)
+
 const tabs = [
-  { id: 'analytics', label: 'Overview', icon: 'chart-bar' },
-  { id: 'orders', label: 'Orders', icon: 'shopping-bag' },
-  { id: 'products', label: 'Products', icon: 'cube' },
-  { id: 'content', label: 'Content', icon: 'document-text' },
-  { id: 'settings', label: 'Settings', icon: 'cog' },
+  { id: 'analytics', label: 'Overview', icon: 'M18 20V10M12 20V4M6 20v-6' },
+  { id: 'orders', label: 'Orders', icon: 'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z M3 6h18 M16 10a4 4 0 01-8 0' },
+  { id: 'products', label: 'Products', icon: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12' },
+  { id: 'content', label: 'Content', icon: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M16 13H8 M16 17H8' },
+  { id: 'settings', label: 'Settings', icon: 'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z' },
 ]
 
-// Computed title based on active tab
 const activeTabLabel = computed(() => {
   return tabs.find(t => t.id === activeTab.value)?.label || 'Dashboard'
 })
 
-// Greeting based on time
 const greeting = computed(() => {
   const hour = new Date().getHours()
   if (hour < 12) return 'Good morning'
@@ -67,15 +66,10 @@ const currentDate = computed(() => {
   })
 })
 
-// Orders state
 const orders = ref([])
 const selectedOrder = ref(null)
 const isLoadingOrders = ref(false)
-
-// Products state
 const products = ref([])
-
-// Analytics state
 const analytics = ref({
   totalOrders: 0,
   pendingVerification: 0,
@@ -92,7 +86,6 @@ const analytics = ref({
   ordersMonth: 0
 })
 
-// Login
 async function handleLogin() {
   if (!passcode.value) {
     authError.value = 'Please enter the admin passcode'
@@ -126,7 +119,6 @@ async function handleLogin() {
   }
 }
 
-// Logout
 function handleLogout() {
   adminToken.value = null
   isAuthenticated.value = false
@@ -134,8 +126,6 @@ function handleLogout() {
   router.push('/')
 }
 
-
-// Check stored token
 onMounted(() => {
   const storedToken = localStorage.getItem('mks_admin_token')
   if (storedToken) {
@@ -145,7 +135,6 @@ onMounted(() => {
   }
 })
 
-// Load data
 async function loadData() {
   await Promise.all([
     loadOrders(),
@@ -190,7 +179,6 @@ async function loadProducts() {
   }
 }
 
-
 async function loadAnalytics() {
   try {
     const response = await fetch(`${API_URL}/api/admin/analytics`, {
@@ -211,11 +199,6 @@ async function loadAnalytics() {
 
 function handleOrderSelect(order) {
   selectedOrder.value = order
-}
-
-function handleOrderUpdated() {
-  loadOrders()
-  loadAnalytics()
 }
 
 function closeOrderModal() {
@@ -279,204 +262,229 @@ async function handleOrderStatusUpdate({ orderId, status }) {
 </script>
 
 <template>
-  <div class="admin-root">
-    <!-- ========== LOGIN SCREEN ========== -->
-    <div v-if="!isAuthenticated" class="login-screen">
-      <!-- Animated Background -->
-      <div class="login-bg">
-        <div class="login-orb login-orb--1"></div>
-        <div class="login-orb login-orb--2"></div>
-        <div class="login-orb login-orb--3"></div>
-        <div class="login-noise"></div>
-      </div>
-
-      <div class="login-card">
-        <!-- Logo area -->
-        <div class="login-logo">
-          <div class="login-logo__icon overflow-hidden">
-            <img src="/logo.jpeg" alt="MKS Admin" class="w-full h-full object-cover" />
-          </div>
-          <h1 class="login-title">MKS Admin</h1>
-          <p class="login-subtitle">Secure dashboard access</p>
-        </div>
-
-        <form @submit.prevent="handleLogin" class="login-form">
-          <div class="login-field">
-            <label class="login-label">Passcode</label>
-            <div class="login-input-wrap">
-              <input
-                v-model="passcode"
-                :type="showPasscode ? 'text' : 'password'"
-                class="login-input"
-                placeholder="Enter your passcode"
-                autofocus
-              />
-              <button type="button" class="login-eye" @click="showPasscode = !showPasscode" tabindex="-1">
-                <svg v-if="!showPasscode" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-              </button>
-            </div>
-            <p v-if="authError" class="login-error">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-              {{ authError }}
-            </p>
-          </div>
-
-          <button type="submit" class="login-btn" :disabled="isLoading">
-            <span v-if="isLoading" class="login-btn__spinner"></span>
-            <span>{{ isLoading ? 'Verifying...' : 'Unlock Dashboard' }}</span>
-            <svg v-if="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </button>
-        </form>
-
-        <button class="login-back" @click="router.push('/')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          Back to Store
-        </button>
-      </div>
+  <div class="min-h-screen bg-slate-50 text-slate-800 font-inter selection:bg-emerald-500/20 selection:text-emerald-900 overflow-hidden relative">
+    
+    <!-- Background Effects -->
+    <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
+      <!-- Ambient Lights for Light Theme -->
+      <div class="absolute -top-[10%] -right-[5%] w-[800px] h-[800px] bg-emerald-500/5 rounded-full blur-[120px] mix-blend-multiply animate-pulse-slow"></div>
+      <div class="absolute bottom-[10%] -left-[10%] w-[600px] h-[600px] bg-emerald-700/5 rounded-full blur-[100px] mix-blend-multiply animate-float"></div>
+      <div class="absolute top-[40%] left-[20%] w-[400px] h-[400px] bg-[#d4af37]/5 rounded-full blur-[80px] mix-blend-multiply animate-float" style="animation-delay: -5s"></div>
     </div>
 
-    <!-- ========== DASHBOARD LAYOUT ========== -->
-    <div v-else class="dashboard-layout">
-      
-      <!-- Desktop Sidebar -->
-      <nav
-        class="sidebar"
-        :class="{ 'sidebar--expanded': sidebarExpanded }"
-        @mouseenter="sidebarExpanded = true"
-        @mouseleave="sidebarExpanded = false"
-      >
-        <div class="sidebar__logo">
-          <div class="sidebar__logo-icon flex items-center justify-center overflow-hidden rounded-full w-8 h-8">
-            <img src="/logo.jpeg" alt="MKS Admin" class="w-full h-full object-cover" />
+    <!-- Login Screen -->
+    <Transition name="fade-slide" mode="out-in">
+      <div v-if="!isAuthenticated" class="relative z-10 min-h-screen flex items-center justify-center p-6 bg-transparent">
+        <div class="w-full max-w-md">
+          
+          <div class="text-center mb-10 slide-up" style="animation-delay: 0.1s;">
+            <!-- Premium Logo Reveal -->
+            <div class="relative w-24 h-24 mx-auto mb-6 transform hover:scale-105 transition-transform duration-500">
+              <div class="absolute inset-0 bg-emerald-500/20 rounded-3xl blur-2xl animate-pulse-slow"></div>
+              <img src="/logo.jpeg" alt="Logo" class="relative w-full h-full object-cover rounded-3xl border border-slate-200/50 shadow-xl bg-white" />
+            </div>
+            <h1 class="text-4xl font-outfit font-extrabold text-slate-800 tracking-tight">Admin Gateway</h1>
+            <p class="text-emerald-600 text-sm font-medium mt-3 uppercase tracking-widest font-inter">Secure Operations Center</p>
           </div>
-          <span class="sidebar__logo-text" v-show="sidebarExpanded">MKS Admin</span>
-        </div>
 
-        <div class="sidebar__nav">
+          <div class="bg-white/80 rounded-[2rem] p-8 relative overflow-hidden backdrop-blur-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white slide-up" style="animation-delay: 0.2s;">
+            <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent"></div>
+            
+            <form @submit.prevent="handleLogin" class="space-y-6">
+              <div class="space-y-2 relative">
+                <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-[0.15em] ml-1">Authentication Key</label>
+                <div class="relative group">
+                  <input
+                    v-model="passcode"
+                    :type="showPasscode ? 'text' : 'password'"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-800 text-base outline-none transition-all duration-300 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-300"
+                    placeholder="Enter operations passcode"
+                    autofocus
+                  />
+                  <button type="button" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 p-2 rounded-xl hover:bg-slate-100 transition-all" @click="showPasscode = !showPasscode">
+                    <svg v-if="!showPasscode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                  </button>
+                </div>
+                
+                <Transition name="fade">
+                  <div v-if="authError" class="absolute -bottom-6 left-1 text-rose-500 text-xs font-medium flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    {{ authError }}
+                  </div>
+                </Transition>
+              </div>
+
+              <button type="submit" class="w-full relative group overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 text-white font-semibold py-4 mt-6 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-0.5" :disabled="isLoading">
+                <div class="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-400 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+                <div class="relative flex items-center justify-center gap-3">
+                  <span v-if="isLoading" class="flex items-center gap-2">
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span>Authenticating Handshake...</span>
+                  </span>
+                  <template v-else>
+                    <span class="tracking-wide">Initialize Session</span>
+                    <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                  </template>
+                </div>
+              </button>
+            </form>
+
+            <button @click="router.push('/')" class="mt-8 w-full flex justify-center items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors text-xs font-semibold tracking-wide uppercase">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+              Return to storefront
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Layout -->
+      <div v-else class="relative z-10 flex h-screen overflow-hidden text-sm">
+        
+        <!-- Sidebar (Desktop) -->
+        <aside 
+          class="hidden md:flex flex-col border-r border-slate-200 bg-white shadow-[10px_0_30px_rgb(0,0,0,0.02)] transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] relative z-50 group"
+          :class="isSidebarExpanded ? 'w-[260px]' : 'w-[80px]'"
+          @mouseenter="isSidebarExpanded = true"
+          @mouseleave="isSidebarExpanded = false"
+        >
+          <!-- Logo Area -->
+          <div class="h-24 flex items-center px-6 border-b border-slate-100">
+            <div class="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-slate-200 shadow-sm flex items-center justify-center bg-white">
+              <img src="/logo.jpeg" alt="Logo" class="w-full h-full object-cover" />
+            </div>
+            <div class="ml-4 overflow-hidden transition-all duration-300 whitespace-nowrap" :class="isSidebarExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'">
+              <span class="block font-outfit font-bold tracking-wide text-slate-900 text-base">MKS Agency</span>
+              <span class="block text-[0.65rem] text-emerald-600 font-bold uppercase tracking-widest mt-0.5">Admin Ops</span>
+            </div>
+          </div>
+
+          <!-- Navigation -->
+          <div class="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              @click="setActiveTab(tab.id)"
+              class="w-full flex items-center px-3 py-3.5 rounded-xl transition-all duration-300 relative group/nav"
+              :class="activeTab === tab.id ? 'bg-emerald-50 text-emerald-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'"
+            >
+              <!-- Active Glow Line -->
+              <div v-if="activeTab === tab.id" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-emerald-500 rounded-r-full shadow-[0_0_10px_rgba(16,185,129,0.3)]"></div>
+              
+              <div class="w-6 h-6 flex items-center justify-center shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path :d="tab.icon"/>
+                </svg>
+              </div>
+              <span class="ml-4 tracking-wide whitespace-nowrap transition-all duration-300" :class="[isSidebarExpanded ? 'opacity-100' : 'opacity-0', activeTab === tab.id ? 'font-bold' : 'font-medium']">{{ tab.label }}</span>
+            </button>
+          </div>
+
+          <!-- Bottom Actions -->
+          <div class="p-4 border-t border-slate-100">
+             <button @click="handleLogout" class="w-full flex items-center px-3 py-3 rounded-xl transition-all duration-300 text-rose-500 hover:bg-rose-50 hover:text-rose-600 group/logout">
+               <div class="w-6 h-6 flex items-center justify-center shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+               </div>
+               <span class="ml-4 font-bold tracking-wide whitespace-nowrap transition-all duration-300" :class="isSidebarExpanded ? 'opacity-100' : 'opacity-0'">Terminate Session</span>
+             </button>
+          </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="flex-1 flex flex-col relative min-w-0 bg-transparent">
+          
+          <!-- Top Navigation Header -->
+          <header class="h-24 sticky top-0 z-40 px-6 md:px-10 flex items-center justify-between border-b border-slate-200 bg-white/70 backdrop-blur-2xl transition-all shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
+            <div class="flex items-center gap-4">
+              <div class="md:hidden w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
+                <img src="/logo.jpeg" alt="Logo" class="w-8 h-8 object-cover rounded-lg" />
+              </div>
+              <div class="animate-fade-in-up">
+                <h1 class="font-outfit text-2xl md:text-[1.75rem] font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
+                  {{ activeTabLabel }}
+                  <span v-if="isLoadingOrders" class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                  </span>
+                </h1>
+                <p class="text-[0.8rem] text-emerald-600 font-semibold tracking-wide mt-1">{{ greeting }} <span class="text-slate-300 mx-2 inline-block">|</span> <span class="text-slate-500">{{ currentDate }}</span></p>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-3 animate-fade-in-left">
+              <button @click="loadData" class="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-emerald-600 hover:bg-slate-50 hover:border-emerald-200 shadow-sm flex items-center justify-center transition-all group" title="Sync Data">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:rotate-180 transition-transform duration-700 ease-out"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/></svg>
+              </button>
+              <button @click="handleLogout" class="md:hidden w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-all shadow-sm">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              </button>
+            </div>
+          </header>
+
+          <!-- Render active component view -->
+          <div class="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative p-6 md:p-10 pb-28 md:pb-10 z-10">
+            <Transition name="view-transition" mode="out-in">
+              <div :key="activeTab" class="h-full w-full max-w-[1600px] mx-auto">
+                <AnalyticsDashboard v-if="activeTab === 'analytics'" :analytics="analytics" />
+                
+                <OrdersManager
+                  v-else-if="activeTab === 'orders'"
+                  :orders="orders"
+                  :is-loading="isLoadingOrders"
+                  @refresh="loadOrders"
+                  @select-order="handleOrderSelect"
+                />
+
+                <ProductsManager
+                  v-else-if="activeTab === 'products'"
+                  :products="products"
+                  :admin-token="adminToken"
+                  @refresh="loadProducts"
+                />
+
+                <ContentManager v-else-if="activeTab === 'content'" :admin-token="adminToken" />
+
+                <!-- Settings Stub -->
+                <div v-else-if="activeTab === 'settings'" class="flex flex-col items-center justify-center min-h-[65vh] text-center max-w-lg mx-auto">
+                  <div class="relative mb-8 group">
+                    <div class="absolute inset-0 bg-emerald-100 blur-[60px] rounded-full group-hover:bg-emerald-200/50 transition-all duration-700"></div>
+                    <div class="w-28 h-28 rounded-[2.5rem] bg-white border border-slate-200 shadow-xl flex items-center justify-center relative transform group-hover:scale-105 transition-all duration-500">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-500">
+                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <h2 class="text-4xl font-outfit font-extrabold text-slate-800 mb-4 tracking-tight">Platform Configuration</h2>
+                  <p class="text-slate-500 mb-10 text-base leading-relaxed">Advanced controls for SEO, localization, tax setups, global shipping zones, and integration management are being forged.</p>
+                  <div class="px-6 py-2.5 rounded-2xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold tracking-widest uppercase shadow-sm">Deployment Pending</div>
+                </div>
+              </div>
+            </Transition>
+          </div>
+        </main>
+
+        <!-- Mobile Bottom Nav -->
+        <nav class="md:hidden fixed bottom-6 left-4 right-4 z-50 rounded-[1.5rem] bg-white/95 backdrop-blur-xl border border-slate-200 shadow-xl flex justify-between p-2">
           <button
             v-for="tab in tabs"
             :key="tab.id"
             @click="setActiveTab(tab.id)"
-            class="sidebar__item"
-            :class="{ 'sidebar__item--active': activeTab === tab.id }"
-            :title="tab.label"
+            class="flex flex-col items-center justify-center p-3 rounded-2xl transition-all duration-300 relative flex-1"
+            :class="activeTab === tab.id ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-700'"
           >
-            <div class="sidebar__icon">
-              <!-- Chart Bar -->
-              <svg v-if="tab.icon === 'chart-bar'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-              <!-- Shopping Bag -->
-              <svg v-else-if="tab.icon === 'shopping-bag'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-              <!-- Cube -->
-              <svg v-else-if="tab.icon === 'cube'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              <!-- Document Text -->
-              <svg v-else-if="tab.icon === 'document-text'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              <!-- Cog -->
-              <svg v-else-if="tab.icon === 'cog'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <div class="relative z-10 transition-transform duration-300" :class="activeTab === tab.id ? '-translate-y-1' : ''">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="tab.icon"/>
+              </svg>
             </div>
-            <span class="sidebar__label" v-show="sidebarExpanded">{{ tab.label }}</span>
-            <div v-if="activeTab === tab.id" class="sidebar__indicator"></div>
+            <span class="text-[0.65rem] font-bold tracking-wide transition-all duration-300 uppercase absolute bottom-2" :class="activeTab === tab.id ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'">{{ tab.label }}</span>
+            <div v-if="activeTab === tab.id" class="absolute inset-0 bg-emerald-50 rounded-2xl pointer-events-none"></div>
           </button>
-        </div>
+        </nav>
 
-        <!-- Sidebar footer -->
-        <div class="sidebar__footer">
-          <button class="sidebar__item sidebar__item--logout" @click="handleLogout" title="Logout">
-            <div class="sidebar__icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </div>
-            <span class="sidebar__label" v-show="sidebarExpanded">Logout</span>
-          </button>
-        </div>
-      </nav>
+      </div>
+    </Transition>
 
-      <!-- Mobile Bottom Navigation -->
-      <nav class="mobile-nav">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          @click="setActiveTab(tab.id)"
-          class="mobile-nav__item"
-          :class="{ 'mobile-nav__item--active': activeTab === tab.id }"
-        >
-          <div class="mobile-nav__icon">
-            <svg v-if="tab.icon === 'chart-bar'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-            <svg v-else-if="tab.icon === 'shopping-bag'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-            <svg v-else-if="tab.icon === 'cube'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            <svg v-else-if="tab.icon === 'document-text'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <svg v-else-if="tab.icon === 'cog'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          </div>
-          <span class="mobile-nav__label">{{ tab.label }}</span>
-        </button>
-      </nav>
-
-      <!-- Top Header Bar -->
-      <header class="topbar">
-        <div class="topbar__left">
-          <!-- Mobile logo -->
-          <div class="topbar__mobile-logo flex items-center justify-center overflow-hidden rounded-full w-8 h-8">
-            <img src="/logo.jpeg" alt="MKS Admin" class="w-full h-full object-cover" />
-          </div>
-          <div>
-            <h1 class="topbar__title">{{ activeTabLabel }}</h1>
-            <p class="topbar__subtitle">{{ greeting }} — {{ currentDate }}</p>
-          </div>
-        </div>
-        <div class="topbar__actions">
-          <button @click="loadData" class="topbar__btn" title="Refresh data">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          </button>
-          <button @click="handleLogout" class="topbar__btn topbar__btn--logout md:hidden" title="Logout">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          </button>
-        </div>
-      </header>
-
-      <!-- Main Content Area -->
-      <main class="main-content">
-        <Transition name="page" mode="out-in">
-          
-          <div v-if="activeTab === 'analytics'" key="analytics">
-             <AnalyticsDashboard :analytics="analytics" />
-          </div>
-
-          <div v-else-if="activeTab === 'orders'" key="orders">
-            <OrdersManager
-              :orders="orders"
-              :is-loading="isLoadingOrders"
-              @refresh="loadOrders"
-              @select-order="handleOrderSelect"
-            />
-          </div>
-
-          <div v-else-if="activeTab === 'products'" key="products">
-            <ProductsManager
-              :products="products"
-              :admin-token="adminToken"
-              @refresh="loadProducts"
-            />
-          </div>
-
-          <div v-else-if="activeTab === 'content'" key="content">
-            <ContentManager :admin-token="adminToken" />
-          </div>
-
-          <div v-else-if="activeTab === 'settings'" key="settings" class="settings-placeholder">
-            <div class="settings-placeholder__icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </div>
-            <h2 class="settings-placeholder__title">Settings</h2>
-            <p class="settings-placeholder__desc">Configure store settings, payments, and shipping options.</p>
-            <span class="settings-placeholder__badge">Coming Soon</span>
-          </div>
-
-        </Transition>
-        <!-- Hidden router-view for child route matching -->
-        <router-view v-show="false" />
-      </main>
-    </div>
-
-    <!-- Order Edit Modal -->
     <OrderEditModal
       :order="selectedOrder"
       :show="!!selectedOrder"
@@ -487,674 +495,85 @@ async function handleOrderStatusUpdate({ orderId, status }) {
   </div>
 </template>
 
-
-
 <style scoped>
-/* ============================================================
-   ADMIN DASHBOARD — Refined Dark Theme
-   ============================================================ */
-
-.admin-root {
-  min-height: 100vh;
-  background: #0c0d10;
-  color: #e4e5e9;
-  font-family: 'Inter', 'Outfit', system-ui, -apple-system, sans-serif;
-}
-
-/* ----- LOGIN SCREEN ----- */
-.login-screen {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.login-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.login-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-  animation: orbFloat 12s ease-in-out infinite alternate;
-}
-
-.login-orb--1 {
-  width: 300px;
-  height: 300px;
-  background: #10b981;
-  top: -60px;
-  right: -40px;
-  animation-delay: 0s;
-}
-
-.login-orb--2 {
-  width: 250px;
-  height: 250px;
-  background: #6366f1;
-  bottom: -60px;
-  left: -30px;
-  animation-delay: -4s;
-}
-
-.login-orb--3 {
-  width: 180px;
-  height: 180px;
-  background: #f59e0b;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation-delay: -8s;
-  opacity: 0.15;
-}
-
-.login-noise {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events: none;
-}
-
-@keyframes orbFloat {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(20px, -20px) scale(1.08); }
-}
-
-.login-card {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  max-width: 400px;
-  background: rgba(18, 19, 24, 0.85);
-  backdrop-filter: blur(40px) saturate(150%);
-  -webkit-backdrop-filter: blur(40px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: 2.5rem;
-  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.06);
-  animation: cardAppear 0.5s ease-out;
-}
-
-@keyframes cardAppear {
-  from { opacity: 0; transform: translateY(16px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.login-logo {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.login-logo__icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
-}
-
-.login-title {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: #f0f1f3;
-  margin: 0 0 0.25rem;
-}
-
-.login-subtitle {
-  font-size: 0.85rem;
-  color: #787992;
-  margin: 0;
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.login-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.login-input-wrap {
-  position: relative;
-}
-
-.login-input {
-  width: 100%;
-  padding: 0.875rem 1rem;
-  padding-right: 2.75rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: #f0f1f3;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
-  outline: none;
-  box-sizing: border-box;
-}
-
-.login-input::placeholder {
-  color: #4b5563;
-}
-
-.login-input:focus {
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.login-eye {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 0.25rem;
-  display: flex;
-  transition: color 0.2s;
-}
-
-.login-eye:hover {
-  color: #d1d5db;
-}
-
-.login-error {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.8rem;
-  color: #f87171;
-  margin: 0;
-}
-
-.login-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.875rem;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
-}
-
-.login-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45);
-  transform: translateY(-1px);
-}
-
-.login-btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.login-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.login-btn__spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.login-back {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  width: 100%;
-  margin-top: 1.5rem;
-  background: none;
-  border: none;
-  color: #6b7280;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.login-back:hover {
-  color: #10b981;
-}
-
-
-/* ----- DASHBOARD LAYOUT ----- */
-.dashboard-layout {
-  min-height: 100vh;
-  padding-bottom: 5rem;
-  transition: padding-left 0.3s ease;
-}
-
-@media (min-width: 768px) {
-  .dashboard-layout {
-    padding-left: 72px;
-    padding-bottom: 0;
-  }
-}
-
-/* ----- SIDEBAR (Desktop) ----- */
-.sidebar {
-  display: none;
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 72px;
-  background: #111218;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  z-index: 50;
-  flex-direction: column;
-  padding: 1.25rem 0;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-}
-
-@media (min-width: 768px) {
-  .sidebar {
-    display: flex;
-  }
-}
-
-.sidebar--expanded {
-  width: 200px;
-  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.3);
-}
-
-.sidebar__logo {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0 1.25rem;
-  margin-bottom: 1.75rem;
-  white-space: nowrap;
-}
-
-.sidebar__logo-icon {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.sidebar__logo-text {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  color: #f0f1f3;
-}
-
-.sidebar__nav {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0 0.75rem;
-}
-
-.sidebar__item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.65rem 0.65rem;
-  border-radius: 10px;
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.sidebar__item:hover {
-  color: #d1d5db;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.sidebar__item--active {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.sidebar__item--active:hover {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.12);
-}
-
-.sidebar__indicator {
-  position: absolute;
-  left: -0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 20px;
-  background: #10b981;
-  border-radius: 0 4px 4px 0;
-}
-
-.sidebar__icon {
-  width: 22px;
-  height: 22px;
-  min-width: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sidebar__label {
-  font-family: 'Inter', sans-serif;
-}
-
-.sidebar__footer {
-  padding: 0 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 0.75rem;
-  margin-top: 0.5rem;
-}
-
-.sidebar__item--logout:hover {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.08);
-}
-
-
-/* ----- MOBILE BOTTOM NAV ----- */
-.mobile-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  display: flex;
-  background: rgba(17, 18, 24, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
-}
-
-@media (min-width: 768px) {
-  .mobile-nav {
-    display: none;
-  }
-}
-
-.mobile-nav__item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  padding: 0.65rem 0;
-  background: none;
-  border: none;
-  color: #4b5563;
-  cursor: pointer;
-  transition: all 0.2s ease;
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
 }
-
-.mobile-nav__item--active {
-  color: #10b981;
-}
-
-.mobile-nav__icon {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  transition: all 0.2s ease;
-}
-
-.mobile-nav__item--active .mobile-nav__icon {
-  background: rgba(16, 185, 129, 0.12);
-}
-
-.mobile-nav__label {
-  font-size: 0.6rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-
-/* ----- TOP BAR ----- */
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  background: rgba(12, 13, 16, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-@media (min-width: 768px) {
-  .topbar {
-    padding: 1.25rem 2rem;
-  }
-}
-
-.topbar__left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.topbar__mobile-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-}
-
-@media (min-width: 768px) {
-  .topbar__mobile-logo {
-    display: none;
-  }
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-30px) scale(1.02); }
 }
 
-.topbar__title {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 1.15rem;
-  color: #f0f1f3;
-  margin: 0;
-  line-height: 1.2;
+.animate-pulse-slow {
+  animation: pulse-slow 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
-
-.topbar__subtitle {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin: 0.125rem 0 0;
-  display: none;
-}
-
-@media (min-width: 640px) {
-  .topbar__subtitle {
-    display: block;
-  }
-}
-
-.topbar__actions {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.topbar__btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #9ca3af;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.topbar__btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e5e7eb;
-}
-
-.topbar__btn--logout:hover {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.08);
-  border-color: rgba(248, 113, 113, 0.15);
-}
-
-
-/* ----- MAIN CONTENT ----- */
-.main-content {
-  padding: 1.25rem;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-@media (min-width: 768px) {
-  .main-content {
-    padding: 1.75rem 2rem;
-  }
-}
-
-
-/* ----- PAGE TRANSITION ----- */
-.page-enter-active,
-.page-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+.animate-float {
+  animation: float 12s ease-in-out infinite;
 }
 
-.page-enter-from {
+.slide-up {
   opacity: 0;
-  transform: translateY(6px);
+  animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
-
-.page-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-
-/* ----- SETTINGS PLACEHOLDER ----- */
-.settings-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 5rem 2rem;
-  text-align: center;
-  animation: fadeUp 0.5s ease;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.settings-placeholder__icon {
-  width: 80px;
-  height: 80px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #4b5563;
-  margin-bottom: 1.5rem;
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.settings-placeholder__title {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 1.35rem;
-  color: #f0f1f3;
-  margin: 0 0 0.5rem;
+.animate-fade-in-left {
+  animation: fadeInLeft 0.5s ease-out forwards;
+}
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-.settings-placeholder__desc {
-  font-size: 0.9rem;
-  color: #6b7280;
-  max-width: 320px;
-  margin: 0 0 1.25rem;
-  line-height: 1.5;
+/* Transitions */
+.view-transition-enter-active,
+.view-transition-leave-active {
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.view-transition-enter-from { opacity: 0; transform: translateY(15px) scale(0.99); }
+.view-transition-leave-to { opacity: 0; transform: translateY(-15px) scale(0.99); }
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.fade-slide-enter-from { opacity: 0; transform: scale(0.97); }
+.fade-slide-leave-to { opacity: 0; transform: scale(1.03); }
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
 }
 
-.settings-placeholder__badge {
-  display: inline-flex;
-  padding: 0.4rem 1rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #9ca3af;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+/* Custom Scrollbar for sidebar and main content */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.3);
+  border-radius: 20px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.5);
 }
 </style>

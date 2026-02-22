@@ -1,7 +1,7 @@
 # MKS Agencies — Workspace Rules for Antigravity IDE
 # Auto-loaded by Antigravity for every conversation in this workspace
 # Source of truth: AGENTS.md and agents.md in project root
-# Last Updated: 2026-02-16
+# Last Updated: 2026-02-22
 
 ---
 
@@ -55,6 +55,7 @@
 - Use `.collect()` on large tables without `.take(N)` or index filtering
 - Use `any` type in Convex TypeScript files
 - **Manually construct Convex storage URLs** — Always use `api.files.getFileUrl` query after upload
+- **Assume `orderItems` fields match frontend naming** — DB uses `productName`/`productPrice`/`productImage`, NOT `name`/`price`/`image`. Always normalize or check both.
 - Use `v-html` with user-supplied data
 - Use `localStorage` for sensitive auth tokens
 - Bypass rate limiting checks for admin endpoints
@@ -70,7 +71,7 @@
 | Database | Convex (real-time, TypeScript) | Convex Cloud |
 | Email | Netlify Functions + Nodemailer (Gmail SMTP) | Netlify |
 | Auth | Google OAuth + Email Magic Links + Guest Checkout | — |
-| Products | Static JSON synced from GitHub | GitHub API |
+| Products | Convex `products` table (managed via admin panel) | Convex Cloud |
 | State | Vue Composables (NO Vuex/Pinia) | — |
 | Package Manager | pnpm | — |
 

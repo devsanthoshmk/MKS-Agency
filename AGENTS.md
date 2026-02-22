@@ -1,5 +1,5 @@
 # MKS Agencies — AI Agent Rules
-# Last Updated: 2026-02-16
+# Last Updated: 2026-02-22
 
 ## IDENTITY
 - **Project**: MKS Agencies — Production e-commerce platform for Ayurvedic products
@@ -53,7 +53,7 @@
 | Database | Convex (real-time, TypeScript) | Convex Cloud |
 | Email | Netlify Functions + Nodemailer (Gmail SMTP) | Netlify |
 | Auth | Google OAuth + Email Magic Links + Guest Checkout | — |
-| Products | Static JSON synced from GitHub | GitHub API |
+| Products | Convex `products` table (managed via admin panel) | Convex Cloud |
 | State | Vue Composables (NO Vuex/Pinia) | — |
 | Package Manager | pnpm | — |
 
@@ -89,6 +89,7 @@
 - Use `.collect()` on large tables without `.take(N)` or index filtering
 - Use `any` type in Convex TypeScript files
 - **Manually construct Convex storage URLs** — Always use `api.files.getFileUrl` query after upload. Pattern `${CONVEX_SITE_URL}/api/storage/${storageId}` returns 404!
+- **Assume `orderItems` fields match frontend naming** — DB uses `productName`/`productPrice`/`productImage`, NOT `name`/`price`/`image`. Always normalize or check both.
 
 ## ORDER STATUS FLOW (SACRED — never modify without asking)
 ```
@@ -101,19 +102,23 @@ PENDING_VERIFICATION → PAYMENT_VERIFIED → PROCESSING → SHIPPED → DELIVER
 ```
 MKS-Agency/
 ├── backend/                    # Cloudflare Worker (vanilla JS)
-│   ├── src/index.js            # ALL API routes (single file)
+│   ├── src/
+│   │   ├── index.js            # Entry point, router setup, CORS & Convex middleware
+│   │   ├── routes/             # API routes (admin.js, auth.js, cart.js, orders.js, wishlist.js)
+│   │   ├── lib/               # Auth, JWT, email, rate-limit, Convex client
+│   │   └── utils/             # CORS, helpers, response formatters
 │   ├── wrangler.jsonc          # Dev config
 │   └── wrangler.production.jsonc # Prod config
 ├── frontend/                   # Vue.js 3 + Vite + Tailwind
-│   ├── convex/                 # Schema, queries, mutations
+│   ├── convex/                 # Schema, queries, mutations, files, crons
 │   │   ├── schema.ts           # ⚠️ LIVE DATABASE SCHEMA
 │   │   └── _generated/         # Auto-generated (DO NOT EDIT)
 │   └── src/
 │       ├── composables/        # State management (singleton pattern)
 │       ├── views/              # Route-level pages
-│       └── components/         # Reusable UI components
+│       └── components/         # Reusable UI + admin components
 ├── email-server/               # Netlify Functions
-│   └── functions/email.js      # Email function
+│   └── functions/email.js      # Transactional email
 └── docs/                       # Documentation
 ```
 

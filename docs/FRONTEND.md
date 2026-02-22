@@ -254,9 +254,9 @@ The admin dashboard (`/admin`) provides a comprehensive interface for managing t
 |-----------|-------------|
 | `AnalyticsDashboard.vue` | Displays order statistics, revenue, and status breakdown |
 | `OrdersManager.vue` | Order list with search, filter, and selection |
-| `OrderEditModal.vue` | Full order editing with status updates, tracking info, and notes |
+| `OrderEditModal.vue` | Full order editing with editable customer details, editable items, auto-calculated totals, tracking info |
 | `ProductsManager.vue` | Product list with create/edit/delete via Convex mutations |
-| `ProductEditModal.vue` | **NEW**: Product editing modal with AI-powered tools, JSON I/O, smart image detection, sortable images |
+| `ProductEditModal.vue` | Product editing modal with AI-powered tools, JSON I/O, smart image detection, sortable images |
 | `ContentManager.vue` | Placeholder for future CMS features |
 
 ### Product Management Features
@@ -446,6 +446,25 @@ fetch(`${API_URL}/api/endpoint`, { ... })
 | Database | https://tame-ermine-520.convex.cloud |
 
 ## Changelog
+
+### Editable Order Edit Modal (Feb 2026)
+
+The `OrderEditModal.vue` component has been significantly enhanced with full editing capabilities.
+
+**What changed:**
+- **Editable Customer Details**: Name, email, phone, and full address (street, city, state, postal, country) are now input fields bound to `editingOrder`
+- **Editable Order Items**: Product name, quantity, and price are inline-editable per item. Items can be removed via a hover × button
+- **Auto-Calculated Totals**: Subtotal is computed from `Σ(item.price × item.quantity)`. Discount and shipping cost are editable inputs. Total auto-calculates as `subtotal - discount + shipping`
+- **Field Normalization**: DB schema uses `productName`, `productPrice`, `productImage`, `shippingFee`, `shippingPostal` — the modal normalizes these to `name`, `price`, `image`, `shippingCost`, `shippingZip` on load, and maps them back on save
+- **Reusable CSS**: `.edit-field` scoped class for consistent input styling with hover/focus states
+
+**Technical details:**
+- On **load** (`watch → props.order`): items are normalized so `v-model` binds work consistently regardless of field naming
+- On **save**: normalized names are written back to DB-compatible fields (`productName`, `productPrice`, `productImage`, `shippingFee`, `shippingPostal`) before emitting
+- Totals use Vue `computed` properties (not deep watchers) — no infinite loop risk
+
+**⚠️ Field Name Mismatch Caveat:**
+The `orderItems` DB schema uses `productName`, `productPrice`, `productImage` — but some frontend contexts may reference `name`, `price`, `image`. The modal handles both via normalization. See `docs/DATABASE.md` for the canonical schema.
 
 ### AI-Powered Product Tools (Feb 2026)
 

@@ -9,8 +9,9 @@ A complete e-commerce platform with manual payment verification workflow.
 | **Frontend** | Vue.js 3 (Composition API) |
 | **Backend** | Cloudflare Workers |
 | **Database** | Convex (real-time) |
-| **Auth** | Google OAuth + Email |
-| **Products** | Static JSON (GitHub-synced) |
+| **Auth** | Google OAuth + Email Magic Links + Guest |
+| **Products** | Convex `products` table (managed via admin panel) |
+| **Email** | Netlify Functions + Nodemailer (Gmail SMTP) |
 
 ## Quick Start
 
@@ -80,20 +81,28 @@ pnpm run dev
 
 ```
 MKS-Agencies/
-├── backend/             # Cloudflare Worker
-│   ├── src/index.js     # API routes
-│   └── wrangler.jsonc   # Worker config
-├── frontend/            # Vue.js app
-│   ├── convex/          # Database schema
+├── backend/                 # Cloudflare Worker
 │   ├── src/
-│   │   ├── composables/ # State management
-│   │   ├── views/       # Page components
-│   │   └── assets/      # Static files
+│   │   ├── index.js         # Entry point, router setup, CORS & Convex middleware
+│   │   ├── routes/          # API route handlers (admin, auth, cart, orders, wishlist)
+│   │   ├── lib/             # Auth, JWT, email, rate-limit, Convex client
+│   │   └── utils/           # CORS headers, helpers, response formatters
+│   └── wrangler.jsonc       # Worker config
+├── frontend/                # Vue.js app
+│   ├── convex/              # Database schema, queries, mutations, files, crons
+│   ├── src/
+│   │   ├── composables/     # State management (useAuth, useCart, useOrders, etc.)
+│   │   ├── components/      # Reusable UI + admin components
+│   │   ├── views/           # Page components (HomePage, AdminDashboard, etc.)
+│   │   └── assets/          # Static files
 │   └── index.html
-├── docs/                # Documentation
+├── email-server/            # Netlify Functions (transactional email)
+│   └── functions/email.js
+├── docs/                    # Documentation
 │   ├── BACKEND.md
 │   ├── FRONTEND.md
-│   └── DATABASE.md
+│   ├── DATABASE.md
+│   └── EMAIL_SERVER.md
 └── README.md
 ```
 
@@ -120,8 +129,9 @@ No payment gateway needed - all payments verified manually by admin.
 ## Documentation
 
 - [Backend API](docs/BACKEND.md) - API endpoints, testing with curl
-- [Frontend](docs/FRONTEND.md) - Composables, routes, setup
+- [Frontend](docs/FRONTEND.md) - Composables, routes, admin dashboard
 - [Database](docs/DATABASE.md) - Convex schema, queries, mutations
+- [Email Server](docs/EMAIL_SERVER.md) - Transactional emails via Netlify
 
 ---
 

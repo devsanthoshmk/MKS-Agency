@@ -173,7 +173,8 @@ Backend runs at: `http://localhost:8787`
 |--------|----------|-------------|
 | POST | `/api/admin/login` | Admin login (rate-limited: 5/15min) |
 | GET  | `/api/admin/orders` | Get all orders |
-| PUT  | `/api/admin/orders/:id/status` | Update order status |
+| PUT  | `/api/admin/orders/:id` | Update order details (general update — status, tracking, notes) |
+| PUT  | `/api/admin/orders/:id/status` | Update order status (dedicated status endpoint) |
 | GET  | `/api/admin/analytics` | Get order analytics |
 | PUT  | `/api/admin/products` | Manage products (Convex) |
 

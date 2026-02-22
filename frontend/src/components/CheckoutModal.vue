@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUI } from '../composables/useUI'
 import { useCart } from '../composables/useCart'
@@ -10,7 +10,7 @@ const router = useRouter()
 const { activeModal, closeModal, success, error: showError } = useUI()
 const { items, subtotal, clearCart } = useCart()
 const { isAuthenticated, user, continueAsGuest } = useAuth()
-const { placeOrder, isLoading } = useOrders()
+const { placeOrder, isLoading, loadOrders, orders } = useOrders()
 
 const isOpen = computed(() => activeModal.value === 'checkout')
 
@@ -30,11 +30,139 @@ const isSubmitting = ref(false)
 const orderSuccess = ref(false)
 const orderNumber = ref('')
 
-// Pre-fill form if authenticated
-if (isAuthenticated.value && user.value) {
-  form.value.name = user.value.name || ''
-  form.value.email = user.value.email || ''
-  form.value.phone = user.value.phone || ''
+// Autocomplete State
+const focusedField = ref(null)
+
+// Compute unique values from previous orders for autocomplete
+const uniqueValues = computed(() => {
+  if (!orders.value || orders.value.length === 0) {
+    return { name: [], phone: [], address: [], city: [], postal: [] }
+  }
+
+  const extractUnique = (field) => {
+    // Navigate into 'shipping' object if strictly following structure, 
+    // but checks top level or flattened structure depending on how orders are stored. 
+    // Based on useOrders.js placeOrder, it sends structure:
+    // shipping: { name, email, phone, address, city, state, postal }
+    // So we need to look at order.shippingAddress (from OrdersModal view) or map correctly.
+    // Let's look at OrdersModal.vue again: 
+    // {{ currentOrder.shippingName }}, {{ currentOrder.shippingAddress }}
+    // The backend seems to return flattened fields like shippingName, shippingAddress etc.
+    // Let's assume flattened fields based on OrdersModal.vue usage.
+    
+    // Mapping form fields to order fields
+    const fieldMap = {
+      name: 'shippingName',
+      phone: 'shippingPhone',
+      address: 'shippingAddress',
+      city: 'shippingCity',
+      state: 'shippingState',
+      postal: 'shippingPostal'
+    }
+    
+    const key = fieldMap[field] || field
+    const values = orders.value
+      .map(o => o[key])
+      .filter(v => v && typeof v === 'string' && v.trim() !== '')
+    
+    return [...new Set(values)].slice(0, 5) // Return top 5 unique
+  }
+
+  return {
+    name: extractUnique('name'),
+    phone: extractUnique('phone'),
+    address: extractUnique('address'),
+    city: extractUnique('city'),
+    postal: extractUnique('postal')
+  }
+})
+
+// Initialize form
+function initForm() {
+    if (isAuthenticated.value) {
+        // 1. Try User Profile
+        if (user.value) {
+            form.value.name = user.value.name || ''
+            form.value.email = user.value.email || ''
+            form.value.phone = user.value.phone || ''
+        } else {
+             // If user object lacks email but is authenticated (rare), default from auth state if possible
+             // user.value should have email.
+        }
+
+        // 2. Load Orders for History
+        loadOrders()
+    }
+}
+
+onMounted(() => {
+    initForm()
+})
+
+// Watch for orders to load, then autofill ONLY if fields are empty
+watch(orders, (newOrders) => {
+    if (newOrders.length > 0 && isAuthenticated.value) {
+        const lastOrder = newOrders[0] // Assuming sorted by new
+        
+        // Helper to fill if empty
+        const fillIfEmpty = (field, value) => {
+            if (!form.value[field] && value) form.value[field] = value
+        }
+
+        // We use the same flattened keys as observed in OrdersModal
+        fillIfEmpty('name', lastOrder.shippingName)
+        fillIfEmpty('phone', lastOrder.shippingPhone)
+        fillIfEmpty('address', lastOrder.shippingAddress)
+        fillIfEmpty('city', lastOrder.shippingCity)
+        fillIfEmpty('state', lastOrder.shippingState)
+        fillIfEmpty('postal', lastOrder.shippingPostal)
+    }
+}, { immediate: true })
+
+// ALSO watch user object in case it loads late
+watch(user, (u) => {
+    if (u && isAuthenticated.value) {
+        if (!form.value.name) form.value.name = u.name || ''
+        // Always force email to match authenticated user
+        form.value.email = u.email || ''
+        if (!form.value.phone) form.value.phone = u.phone || ''
+    }
+})
+
+// Re-init on modal open
+watch(isOpen, (val) => {
+    if (val) initForm()
+})
+
+function handleBlur(field) {
+  // Delay clearing focus to allow click event to register on dropdown
+  setTimeout(() => {
+    // Only clear if the focus hasn't shifted to the same field (re-focus) 
+    // or properly shifted to another logic. 
+    // Here we mainly want to prevent clearing if we just clicked the toggle button which might steal focus briefly,
+    // or if we switched to another field (in which case that field set focusedField already).
+    // The issue described is "closes when i click other fields" -> Race condition.
+    // If I click Field A, focusedField='A'. Click Field B:
+    // 1. Field B focus -> focusedField='B'
+    // 2. Field A blur -> timeout -> if (focusedField == 'A') then null.
+    // If focusedField is already 'B', this condition fails, preventing the close. Correct.
+    if (focusedField.value === field) {
+      focusedField.value = null
+    }
+  }, 200)
+}
+
+function toggleDropdown(field) {
+  if (focusedField.value === field) {
+    focusedField.value = null
+  } else {
+    focusedField.value = field
+  }
+}
+
+function selectSuggestion(field, value) {
+  form.value[field] = value
+  focusedField.value = null
 }
 
 const shippingFee = computed(() => subtotal.value >= 500 ? 0 : 50)
@@ -249,16 +377,45 @@ const indianStates = [
                    Contact Details
                 </h3>
                 <div class="grid gap-5">
-                  <div>
+                  <div class="relative z-30">
                     <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">Full Name</label>
-                    <input 
-                      v-model="form.name"
-                      type="text"
-                      class="input"
-                      :class="{ 'input-error': errors.name }"
-                      placeholder="e.g. John Doe"
-                    />
+                    <div class="relative">
+                      <input 
+                        v-model="form.name"
+                        type="text"
+                        class="input pr-10"
+                        :class="{ 'input-error': errors.name }"
+                        placeholder="e.g. John Doe"
+                        @focus="focusedField = 'name'"
+                        @blur="handleBlur('name')"
+                      />
+                      <button 
+                        v-if="uniqueValues.name.length > 0"
+                        type="button"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-primary-600 transition-colors p-1 rounded-full hover:bg-surface-100"
+                        @mousedown.prevent="toggleDropdown('name')"
+                        tabindex="-1"
+                      >
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': focusedField === 'name' }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                      </button>
+                    </div>
                     <p v-if="errors.name" class="text-red-500 text-xs mt-1 ml-1">{{ errors.name }}</p>
+                    
+                    <!-- Autocomplete Dropdown -->
+                    <div 
+                      v-if="focusedField === 'name' && uniqueValues.name.length > 0"
+                      class="absolute z-20 left-0 right-0 mt-1 bg-white border border-surface-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar animate-fade-in"
+                    >
+                      <button
+                        v-for="value in uniqueValues.name"
+                        :key="value"
+                        type="button"
+                        class="w-full text-left px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 transition-colors"
+                        @mousedown.prevent="selectSuggestion('name', value)"
+                      >
+                        {{ value }}
+                      </button>
+                    </div>
                   </div>
                   
                   <div class="grid sm:grid-cols-2 gap-5">
@@ -268,21 +425,54 @@ const indianStates = [
                         v-model="form.email"
                         type="email"
                         class="input"
-                        :class="{ 'input-error': errors.email }"
+                        :class="[
+                          { 'input-error': errors.email },
+                          isAuthenticated ? 'bg-surface-50 text-surface-500 cursor-not-allowed' : ''
+                        ]"
                         placeholder="john@example.com"
+                        :readonly="isAuthenticated"
                       />
                       <p v-if="errors.email" class="text-red-500 text-xs mt-1 ml-1">{{ errors.email }}</p>
                     </div>
-                    <div>
+                    <div class="relative z-30">
                       <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">Phone</label>
-                      <input 
-                        v-model="form.phone"
-                        type="tel"
-                        class="input"
-                        :class="{ 'input-error': errors.phone }"
-                        placeholder="10-digit mobile number"
-                      />
+                      <div class="relative">
+                        <input 
+                          v-model="form.phone"
+                          type="tel"
+                          class="input pr-10"
+                          :class="{ 'input-error': errors.phone }"
+                          placeholder="10-digit mobile number"
+                          @focus="focusedField = 'phone'"
+                          @blur="handleBlur('phone')"
+                        />
+                        <button 
+                          v-if="uniqueValues.phone.length > 0"
+                          type="button"
+                          class="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-primary-600 transition-colors p-1 rounded-full hover:bg-surface-100"
+                          @mousedown.prevent="toggleDropdown('phone')"
+                          tabindex="-1"
+                        >
+                          <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': focusedField === 'phone' }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                      </div>
                       <p v-if="errors.phone" class="text-red-500 text-xs mt-1 ml-1">{{ errors.phone }}</p>
+
+                      <!-- Autocomplete Dropdown -->
+                      <div 
+                        v-if="focusedField === 'phone' && uniqueValues.phone.length > 0"
+                        class="absolute z-20 left-0 right-0 mt-1 bg-white border border-surface-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar animate-fade-in"
+                      >
+                        <button
+                          v-for="value in uniqueValues.phone"
+                          :key="value"
+                          type="button"
+                          class="w-full text-left px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 transition-colors"
+                          @mousedown.prevent="selectSuggestion('phone', value)"
+                        >
+                          {{ value }}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -295,29 +485,87 @@ const indianStates = [
                    Shipping Address
                 </h3>
                 <div class="grid gap-5">
-                  <div>
+                  <div class="relative z-20">
                     <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">Address</label>
-                    <textarea 
-                      v-model="form.address"
-                      rows="2"
-                      class="input resize-none"
-                      :class="{ 'input-error': errors.address }"
-                      placeholder="House/Flat No, Street, Landmark"
-                    />
+                    <div class="relative">
+                      <textarea 
+                        v-model="form.address"
+                        rows="2"
+                        class="input resize-none pr-10"
+                        :class="{ 'input-error': errors.address }"
+                        placeholder="House/Flat No, Street, Landmark"
+                        @focus="focusedField = 'address'"
+                        @blur="handleBlur('address')"
+                      />
+                      <button 
+                        v-if="uniqueValues.address.length > 0"
+                        type="button"
+                        class="absolute right-3 top-3 text-surface-400 hover:text-primary-600 transition-colors p-1 rounded-full hover:bg-surface-100"
+                        @mousedown.prevent="toggleDropdown('address')"
+                        tabindex="-1"
+                      >
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': focusedField === 'address' }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                      </button>
+                    </div>
                     <p v-if="errors.address" class="text-red-500 text-xs mt-1 ml-1">{{ errors.address }}</p>
+
+                    <!-- Autocomplete Dropdown -->
+                    <div 
+                      v-if="focusedField === 'address' && uniqueValues.address.length > 0"
+                      class="absolute z-20 left-0 right-0 mt-1 bg-white border border-surface-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar animate-fade-in"
+                    >
+                      <button
+                        v-for="value in uniqueValues.address"
+                        :key="value"
+                        type="button"
+                        class="w-full text-left px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 transition-colors truncate"
+                        @mousedown.prevent="selectSuggestion('address', value)"
+                      >
+                        {{ value }}
+                      </button>
+                    </div>
                   </div>
                   
                   <div class="grid sm:grid-cols-3 gap-5">
-                    <div>
+                    <div class="relative z-10 grid-col-span">
                       <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">City</label>
-                      <input 
-                        v-model="form.city"
-                        type="text"
-                        class="input"
-                        :class="{ 'input-error': errors.city }"
-                        placeholder="City"
-                      />
+                      <div class="relative">
+                        <input 
+                          v-model="form.city"
+                          type="text"
+                          class="input pr-10"
+                          :class="{ 'input-error': errors.city }"
+                          placeholder="City"
+                          @focus="focusedField = 'city'"
+                          @blur="handleBlur('city')"
+                        />
+                        <button 
+                          v-if="uniqueValues.city.length > 0"
+                          type="button"
+                          class="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-primary-600 transition-colors p-1 rounded-full hover:bg-surface-100"
+                          @mousedown.prevent="toggleDropdown('city')"
+                          tabindex="-1"
+                        >
+                          <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': focusedField === 'city' }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                      </div>
                       <p v-if="errors.city" class="text-red-500 text-xs mt-1 ml-1">{{ errors.city }}</p>
+
+                      <!-- Autocomplete Dropdown -->
+                      <div 
+                        v-if="focusedField === 'city' && uniqueValues.city.length > 0"
+                        class="absolute z-20 left-0 right-0 mt-1 bg-white border border-surface-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar animate-fade-in"
+                      >
+                        <button
+                          v-for="value in uniqueValues.city"
+                          :key="value"
+                          type="button"
+                          class="w-full text-left px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 transition-colors"
+                          @mousedown.prevent="selectSuggestion('city', value)"
+                        >
+                          {{ value }}
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">State</label>
@@ -333,17 +581,46 @@ const indianStates = [
                       </select>
                       <p v-if="errors.state" class="text-red-500 text-xs mt-1 ml-1">{{ errors.state }}</p>
                     </div>
-                    <div>
+                    <div class="relative z-10">
                       <label class="block text-sm font-medium text-surface-700 mb-1.5 ml-1">PIN Code</label>
-                      <input 
-                        v-model="form.postal"
-                        type="text"
-                        maxlength="6"
-                        class="input"
-                        :class="{ 'input-error': errors.postal }"
-                        placeholder="6-digit PIN"
-                      />
+                      <div class="relative">
+                        <input 
+                          v-model="form.postal"
+                          type="text"
+                          maxlength="6"
+                          class="input pr-10"
+                          :class="{ 'input-error': errors.postal }"
+                          placeholder="6-digit PIN"
+                          @focus="focusedField = 'postal'"
+                          @blur="handleBlur('postal')"
+                        />
+                        <button 
+                          v-if="uniqueValues.postal.length > 0"
+                          type="button"
+                          class="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-primary-600 transition-colors p-1 rounded-full hover:bg-surface-100"
+                          @mousedown.prevent="toggleDropdown('postal')"
+                          tabindex="-1"
+                        >
+                          <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': focusedField === 'postal' }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                      </div>
                       <p v-if="errors.postal" class="text-red-500 text-xs mt-1 ml-1">{{ errors.postal }}</p>
+
+                      <!-- Autocomplete Dropdown -->
+                      <div 
+                        v-if="focusedField === 'postal' && uniqueValues.postal.length > 0"
+                        class="absolute z-20 left-0 right-0 mt-1 bg-white border border-surface-200 rounded-xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar animate-fade-in"
+                      >
+                        <button
+                          v-for="value in uniqueValues.postal"
+                          :key="value"
+                          type="button"
+                          class="w-full text-left px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 transition-colors"
+                          @mousedown.prevent="selectSuggestion('postal', value)"
+                        >
+                          {{ value }}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

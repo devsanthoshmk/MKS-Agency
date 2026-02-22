@@ -152,6 +152,21 @@ Stores both registered and guest users.
 | `quantity` | number | Units ordered |
 | `subtotal` | number | Line total |
 
+> **⚠️ Field Name Mismatch Caveat:**
+> The `orderItems` schema uses `productName`, `productPrice`, `productImage` — NOT `name`, `price`, `image`.
+> Some frontend components (e.g., `CheckoutModal.vue` cart items) use the shorter `name`, `price`, `image` convention.
+> When rendering order items, always check for both variants:
+> ```javascript
+> const name = item.productName || item.name
+> const price = item.productPrice ?? item.price
+> const image = item.productImage || item.image
+> ```
+> The `OrderEditModal.vue` normalizes fields on load and maps them back on save.
+
+> **⚠️ orders table naming:**
+> The `orders` table uses `shippingFee` (not `shippingCost`) and `shippingPostal` (not `shippingZip`).
+> Frontend components that use `shippingCost` or `shippingZip` must be normalized when reading from/writing to the DB.
+
 ### orderStatusHistory
 
 | Field | Type | Description |
@@ -293,7 +308,7 @@ createOrder({
   items: [{ productId, productName, ... }]
 })
 
-// Update order status (admin)
+// Update order status only (admin — lightweight)
 updateOrderStatus({
   orderId,
   status,
@@ -305,6 +320,26 @@ updateOrderStatus({
   cancellationReason?,
   failureReason?
 })
+
+// Update full order details (admin — comprehensive edit)
+// Deletes existing orderItems and re-inserts from the `items` array
+updateOrderDetails({
+  orderId,
+  shippingName, shippingEmail, shippingPhone,
+  shippingAddress, shippingCity, shippingState,
+  shippingZip, shippingCountry,
+  subtotal, discount, shippingCost, total,
+  courierName?, trackingNumber?,
+  status,
+  items: [{
+    productId, name, productName, productSlug,
+    image, productImage, price, productPrice,
+    quantity
+  }]
+})
+// Note: The `items` array accepts both normalized (name/price/image)
+// and DB-canonical (productName/productPrice/productImage) field names.
+// The mutation resolves them internally via fallback logic.
 ```
 
 ### Cart Mutations
